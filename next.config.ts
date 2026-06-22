@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Transpile the agentic-akr ESM package so webpack can bundle it for API routes.
-  transpilePackages: ["agentic-akr"],
+  // Produce a slim self-contained build suitable for Railway container deployment.
+  output: "standalone",
 };
 
 export default nextConfig;
