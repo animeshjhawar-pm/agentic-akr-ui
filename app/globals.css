@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------
+   Semantic color tokens -- Agentic AKR dark theme.
+   Palette mirrors the product mockup: deep slate-navy
+   surfaces, indigo primary, green/amber/red status.
+   Always dark (the tool is a dark dashboard).
+------------------------------------------------------- */
+:root {
+  /* Surface */
+  --background:       #0b0f18; /* app/page background */
+  --surface:          #111726; /* panels / cards */
+  --surface-muted:    #0d1320; /* inputs, striped rows, insets */
+  --surface-elevated: #15203a; /* hover / raised */
+  --border:           #1d2536; /* panel borders */
+
+  /* Text */
+  --on-surface:       #e6e9f2; /* primary text */
+  --on-surface-muted: #9aa6bd; /* secondary text */
+
+  /* Brand */
+  --primary:          #7c83ff; /* indigo */
+  --primary-hover:    #5b62e8;
+  --primary-fg:       #ffffff;
+
+  /* Status */
+  --success:          #34d399; /* green */
+  --success-surface:  #0f2a22;
+  --warning:          #fbbf24; /* amber */
+  --warning-surface:  #2a230f;
+  --danger:           #f87171; /* red */
+  --danger-surface:   #2a1414;
+
+  /* Legacy compat */
+  --foreground: var(--on-surface);
+}
+
+/* -------------------------------------------------------
+   Wire tokens into Tailwind v4 theme
+------------------------------------------------------- */
+@theme inline {
+  --color-background:    var(--background);
+  --color-foreground:    var(--foreground);
+  --color-surface:       var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border:        var(--border);
+  --color-on-surface:    var(--on-surface);
+  --color-on-surface-muted: var(--on-surface-muted);
+  --color-primary:       var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg:    var(--primary-fg);
+  --color-success:       var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning:       var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-danger:        var(--danger);
+  --color-danger-surface: var(--danger-surface);
+
+  /* Typography (loaded via next/font in layout.tsx) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+/* -------------------------------------------------------
+   Base styles
+------------------------------------------------------- */
+body {
+  background: var(--background);
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for data columns */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible focus ring (accessibility) */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Pipeline spinner (motion-safe usage in components) */
+@keyframes akrspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Subtle dark scrollbars to match the theme */
+* {
+  scrollbar-color: #2a3450 transparent;
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2a3450;
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
