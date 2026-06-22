@@ -120,7 +120,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const runId = `${clientId}-${Date.now()}`;
+  const runId = `${clientId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
   // Merge maxResumeRounds into knob overrides.
   const knobOverrides = {

@@ -153,6 +153,10 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
     // Arm stall timer immediately when polling starts
     armStallTimer();
 
+    // Box holds the interval id so poll() can clear it immediately on terminal
+    // without triggering prefer-const (the box itself is const; its field is mutated).
+    const intervalBox: { id: ReturnType<typeof setInterval> | undefined } = { id: undefined };
+
     const poll = async () => {
       if (doneRef.current) return;
 
@@ -194,6 +198,8 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
         if (terminal) {
           doneRef.current = true;
           clearStallTimer();
+          // Clear immediately -- do not wait for the next interval tick's guard.
+          clearInterval(intervalBox.id);
           dispatch({ type: 'done' });
         }
       } catch (err: unknown) {
@@ -205,17 +211,17 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
     // First poll immediately
     void poll();
 
-    const intervalId = setInterval(() => {
+    intervalBox.id = setInterval(() => {
       if (!doneRef.current) {
         void poll();
       } else {
-        clearInterval(intervalId);
+        clearInterval(intervalBox.id);
       }
     }, POLL_INTERVAL_MS);
 
     return () => {
       doneRef.current = true;
-      clearInterval(intervalId);
+      clearInterval(intervalBox.id);
       clearStallTimer();
     };
   }, [runId]);

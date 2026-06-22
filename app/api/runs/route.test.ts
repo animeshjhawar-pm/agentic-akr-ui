@@ -104,7 +104,7 @@ describe('POST /api/runs', () => {
 
     const body = await res.json() as { runId: string; status: string };
     expect(body.status).toBe('queued');
-    expect(body.runId).toMatch(/^client-abc-\d+$/);
+    expect(body.runId).toMatch(new RegExp('^client-abc-'));
 
     // insertRunRequest must be called with the store pool, not the DB pool
     expect(mockInsertRunRequest).toHaveBeenCalledOnce();
@@ -122,6 +122,32 @@ describe('POST /api/runs', () => {
     expect(runInput.clientId).toBe('client-abc');
     expect(runInput.runId).toBe(body.runId);
     expect(Array.isArray(runInput.resources)).toBe(true);
+  });
+
+  it('two concurrent POSTs for the same clientId produce different runIds even when Date.now is mocked to the same value', async () => {
+    // Pin Date.now to a fixed timestamp so any disambiguation must come from the random suffix.
+    const fixedTs = 1700000000000;
+    vi.spyOn(Date, 'now').mockReturnValue(fixedTs);
+
+    const req1 = makeRequest({ clientId: 'client-abc', resourceIds: ['res-1'] });
+    const req2 = makeRequest({ clientId: 'client-abc', resourceIds: ['res-1'] });
+
+    const [res1, res2] = await Promise.all([POST(req1), POST(req2)]);
+
+    expect(res1.status).toBe(202);
+    expect(res2.status).toBe(202);
+
+    const body1 = await res1.json() as { runId: string };
+    const body2 = await res2.json() as { runId: string };
+
+    // Both runIds must start with the clientId prefix
+    expect(body1.runId).toMatch(new RegExp('^client-abc-'));
+    expect(body2.runId).toMatch(new RegExp('^client-abc-'));
+
+    // They must be distinct despite identical clientId and timestamp
+    expect(body1.runId).not.toBe(body2.runId);
+
+    vi.restoreAllMocks();
   });
 
   it('threads maxResumeRounds into knobOverrides passed to mapToRunInput', async () => {
