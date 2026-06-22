@@ -5,6 +5,9 @@
  *
  * Run-configuration panel. Controlled fields with safe defaults.
  * POSTs to /api/runs and transitions to execution view via onRunStarted.
+ *
+ * The POST returns 202 { runId, status: 'queued' } (JSON, no SSE reader).
+ * On success, onRunStarted(runId) is called to hand off to ExecutionView.
  */
 
 import React, { useState } from 'react';
@@ -29,8 +32,8 @@ interface RunConfigProps {
   selectedResourceIds: Set<string>;
   /** Pre-filled from clientDetail.profile.geo; user may override. */
   targetGeoDefault: string;
-  /** Called once the SSE stream opens and we receive the run/start event. */
-  onRunStarted: (runId: string, stream: ReadableStreamDefaultReader<Uint8Array>) => void;
+  /** Called once the run is queued and we have the runId. */
+  onRunStarted: (runId: string) => void;
   /** When true, all inputs and the Run button are disabled. */
   disabled?: boolean;
 }
@@ -107,51 +110,20 @@ export default function RunConfig({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok || !res.body) {
-        const msg = res.ok ? 'Empty response body' : `HTTP ${res.status}`;
+      if (!res.ok) {
+        const msg = `HTTP ${res.status}`;
         throw new Error(msg);
       }
 
-      const reader = res.body.getReader();
+      const json = (await res.json()) as { runId: string; status?: string };
 
-      // Read the first frame to extract runId, then hand off to parent.
-      let runId: string | null = null;
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (runId === null) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        // Parse SSE lines
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const evt = JSON.parse(line.slice(6)) as { type: string; runId?: string };
-              if (evt.runId) {
-                runId = evt.runId;
-                break;
-              }
-            } catch {
-              // malformed frame -- skip
-            }
-          }
-        }
-      }
-
-      if (!runId) {
+      if (!json.runId) {
         throw new Error('No runId received from server');
       }
 
-      // Pass the already-open reader to the parent so it can continue consuming.
-      onRunStarted(runId, reader);
-      // Handoff complete: clear our local loading flag. The panel is NOT
-      // unmounted in this layout, so the button must not stay stuck on
-      // "Starting...". While the run is in flight the parent keeps the button
-      // disabled via the `disabled` prop (runState === 'running'); when the run
-      // completes the parent flips runState to 'done' and the button re-enables.
+      // Hand off to parent with just the runId -- polling handles the rest.
+      onRunStarted(json.runId);
+      // Clear loading flag. The parent controls the disabled prop during the run.
       setLoading(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start run');

@@ -12,7 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, ChevronRight, Loader, AlertCircle } from 'lucide-react';
 import type { RunEvent } from '@/lib/events';
-import { replayEvents } from '@/lib/useRunStream';
+import { replayEvents } from '@/lib/useRunPolling';
 import StateMachine from './StateMachine';
 import EventLog from './EventLog';
 import Results from './Results';

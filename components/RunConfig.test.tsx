@@ -4,6 +4,10 @@
  *   1. Run button disabled when no resources selected, enabled when >=1
  *   2. Default knob values are 3/20/1/5/40
  *   3. Editing a field updates the posted knobs (mock fetch, click Run, assert POST body)
+ *
+ * ADAPTED from the original test: onRunStarted now receives only runId (string),
+ * not (runId, reader). The mock fetch returns 202 JSON { runId, status: 'queued' }
+ * instead of an SSE stream.
  */
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -17,6 +21,17 @@ const BASE_PROPS = {
   targetGeoDefault: 'US / en',
   onRunStarted: vi.fn(),
 };
+
+// ---------------------------------------------------------------------------
+// Helper: mock a successful 202 JSON response
+// ---------------------------------------------------------------------------
+
+function makeSuccessResponse(runId = 'run-1'): Response {
+  return new Response(JSON.stringify({ runId, status: 'queued' }), {
+    status: 202,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 describe('RunConfig', () => {
   beforeEach(() => {
@@ -78,29 +93,7 @@ describe('RunConfig', () => {
   });
 
   it('editing a field updates the posted knobs', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      body: {
-        getReader: () => {
-          let done = false;
-          return {
-            read: async () => {
-              if (done) return { done: true, value: undefined };
-              done = true;
-              const encoder = new TextEncoder();
-              return {
-                done: false,
-                value: encoder.encode(
-                  'data: {"type":"run/start","runId":"run-1","ts":1}\n\n',
-                ),
-              };
-            },
-            releaseLock: () => {},
-          };
-        },
-      },
-    } as unknown as Response);
-
+    const mockFetch = vi.fn().mockResolvedValue(makeSuccessResponse('run-1'));
     vi.stubGlobal('fetch', mockFetch);
 
     const onRunStarted = vi.fn();
@@ -157,23 +150,32 @@ describe('RunConfig', () => {
     expect(body.knobs.maxResumeRounds).toBe(0);
   });
 
-  it('shows loading spinner during POST and disables button', async () => {
-    let resolveRead: () => void;
-    const readPromise = new Promise<void>((res) => { resolveRead = res; });
+  it('calls onRunStarted with only the runId (no reader)', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(makeSuccessResponse('run-42'));
+    vi.stubGlobal('fetch', mockFetch);
 
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      body: {
-        getReader: () => ({
-          read: async () => {
-            await readPromise;
-            return { done: true, value: undefined };
-          },
-          releaseLock: () => {},
-        }),
-      },
-    } as unknown as Response);
+    const onRunStarted = vi.fn();
+    render(
+      <RunConfig
+        {...BASE_PROPS}
+        clientId="client-abc"
+        selectedResourceIds={new Set(['r1'])}
+        onRunStarted={onRunStarted}
+      />,
+    );
 
+    fireEvent.click(screen.getByRole('button', { name: /run akr/i }));
+
+    await waitFor(() => expect(onRunStarted).toHaveBeenCalledTimes(1));
+    // Must be called with exactly one argument: the runId string
+    expect(onRunStarted).toHaveBeenCalledWith('run-42');
+  });
+
+  it('shows loading spinner during POST and re-enables after handoff', async () => {
+    let resolvePost: (v: Response) => void;
+    const postPromise = new Promise<Response>((res) => { resolvePost = res; });
+
+    const mockFetch = vi.fn().mockReturnValue(postPromise);
     vi.stubGlobal('fetch', mockFetch);
 
     render(
@@ -188,12 +190,16 @@ describe('RunConfig', () => {
     const btn = screen.getByRole('button', { name: /run akr/i });
     fireEvent.click(btn);
 
-    // Button should be disabled while streaming
+    // Button should be disabled while waiting for the POST response
     await waitFor(() => expect(btn).toBeDisabled());
 
-    // Resolve the read so cleanup doesn't hang
-    resolveRead!();
+    // Resolve the POST
+    resolvePost!(makeSuccessResponse('run-1'));
+
+    // After handoff, loading clears and the button re-enables
+    await waitFor(() => expect(btn).not.toBeDisabled());
   });
+
   it('Run button and knob inputs are disabled when disabled prop is true', () => {
     render(
       <RunConfig
@@ -220,6 +226,29 @@ describe('RunConfig', () => {
     );
     const btn = screen.getByRole('button', { name: /run akr/i });
     expect(btn).not.toBeDisabled();
+  });
+
+  it('shows error message when POST fails', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response('Internal Server Error', { status: 500 }),
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(
+      <RunConfig
+        {...BASE_PROPS}
+        clientId="client-abc"
+        selectedResourceIds={new Set(['r1'])}
+        onRunStarted={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /run akr/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('alert').textContent).toMatch(/HTTP 500/i);
   });
 
   // ---------------------------------------------------------------------------

@@ -37,7 +37,6 @@ export default function HomePage() {
   // --- Run state (lifted for Tasks 11/12) ---
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>('idle');
-  const [activeReader, setActiveReader] = useState<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
   // --- Client list state ---
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -75,12 +74,11 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Handle run started: receive runId + open SSE reader, hand off to ExecutionView
+  // Handle run started: receive runId, hand off to ExecutionView (polling handles the rest)
   const handleRunStarted = useCallback(
-    (runId: string, reader: ReadableStreamDefaultReader<Uint8Array>) => {
+    (runId: string) => {
       setActiveRunId(runId);
       setRunState('running');
-      setActiveReader(reader);
     },
     [],
   );
@@ -263,11 +261,10 @@ export default function HomePage() {
         {/* Right content section */}
         <section className="flex-1 overflow-y-auto p-4">
           {/* Execution view when running or done */}
-          {(runState === 'running' || runState === 'done') && activeRunId && activeReader && (
+          {(runState === 'running' || runState === 'done') && activeRunId && (
             <ExecutionView
               key={activeRunId}
               runId={activeRunId}
-              reader={activeReader}
               resourceNames={Object.fromEntries((clientDetail?.resources ?? []).map((r) => [r.id, r.name]))}
               onStreamDone={handleStreamDone}
             />

@@ -5,21 +5,21 @@
  *
  * Composes:
  *   - Totals header (always visible above tabs)
- *   - Tabbed layout: Events | Keywords | Clusters | Artifacts
+ *   - Tabbed layout: Commentary | Events | Keywords | Clusters
  *
  * The "Events" tab shows the event log with a Linear / Tree view toggle.
  *
- * Consumes useRunStream(reader, runId) from props.
+ * Consumes useRunPolling(runId) -- polls Supabase via /api/runs/:id.
+ * The Artifacts tab is hidden in the hosted UI (local-only feature).
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Activity, AlertTriangle } from 'lucide-react';
-import { useRunStream } from '@/lib/useRunStream';
+import { useRunPolling } from '@/lib/useRunPolling';
 import Commentary from './Commentary';
 import EventLog from './EventLog';
 import TreeEventLog from './TreeEventLog';
 import Results from './Results';
-import Artifacts from './Artifacts';
 import Clusters from './Clusters';
 
 // ---------------------------------------------------------------------------
@@ -28,12 +28,11 @@ import Clusters from './Clusters';
 
 interface ExecutionViewProps {
   runId: string;
-  reader: ReadableStreamDefaultReader<Uint8Array>;
   /** Optional resourceId -> display name map, threaded to Results/CSV. */
   resourceNames?: Record<string, string>;
   /**
-   * Fired once when the SSE stream finishes (streamDone flips true), so the
-   * parent can move the run lifecycle to 'done' and re-enable RunConfig.
+   * Fired once when the polling detects the run is done (streamDone flips true),
+   * so the parent can move the run lifecycle to 'done' and re-enable RunConfig.
    */
   onStreamDone?: () => void;
 }
@@ -160,14 +159,13 @@ function ViewToggle({ view, onChange }: ViewToggleProps) {
 // Tab ids
 // ---------------------------------------------------------------------------
 
-type TabId = 'commentary' | 'events' | 'keywords' | 'clusters' | 'artifacts';
+type TabId = 'commentary' | 'events' | 'keywords' | 'clusters';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'commentary', label: 'Commentary' },
   { id: 'events', label: 'Events' },
   { id: 'keywords', label: 'Keywords' },
   { id: 'clusters', label: 'Clusters' },
-  { id: 'artifacts', label: 'Artifacts' },
 ];
 
 function tabButtonId(id: TabId) {
@@ -182,10 +180,10 @@ function tabPanelId(id: TabId) {
 // ExecutionView
 // ---------------------------------------------------------------------------
 
-export default function ExecutionView({ runId, reader, resourceNames, onStreamDone }: ExecutionViewProps) {
-  const { stages, log, totals, streamDone, stalled } = useRunStream(reader, runId);
+export default function ExecutionView({ runId, resourceNames, onStreamDone }: ExecutionViewProps) {
+  const { stages, log, totals, streamDone, stalled } = useRunPolling(runId);
 
-  // Notify the parent exactly once when the stream finishes, so the run
+  // Notify the parent exactly once when the run finishes, so the run
   // lifecycle can advance to 'done' (re-enabling RunConfig for a new run).
   const notifiedDoneRef = useRef(false);
   useEffect(() => {
@@ -240,7 +238,7 @@ export default function ExecutionView({ runId, reader, resourceNames, onStreamDo
     [],
   );
 
-  // stages is used by useRunStream but we no longer render pipeline visuals;
+  // stages is returned by useRunPolling but we no longer render pipeline visuals;
   // keep the variable to avoid unused-import lint errors from the hook return.
   void stages;
 
@@ -376,19 +374,6 @@ export default function ExecutionView({ runId, reader, resourceNames, onStreamDo
         >
           <section aria-label="Cluster results">
             <Clusters runId={runId} />
-          </section>
-        </div>
-      )}
-
-      {/* Artifacts */}
-      {activeTab === 'artifacts' && (
-        <div
-          id={tabPanelId('artifacts')}
-          role="tabpanel"
-          aria-labelledby={tabButtonId('artifacts')}
-        >
-          <section aria-label="Run artifacts">
-            <Artifacts runId={runId} streaming={!streamDone} />
           </section>
         </div>
       )}
