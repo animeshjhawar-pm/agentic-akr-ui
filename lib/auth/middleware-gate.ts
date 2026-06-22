@@ -9,13 +9,27 @@
 //   - everything else: false
 
 /**
+ * Known static-file extensions that bypass the auth gate.
+ * Checked against the END of the path (after stripping query string).
+ * Deliberately narrow: only real asset types, NOT arbitrary dots in path segments
+ * (e.g. /api/runs.json or /api/v1.0/runs must still require auth).
+ */
+const STATIC_EXTENSIONS = new Set([
+  '.svg', '.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp',
+  '.css', '.js', '.map', '.woff', '.woff2', '.ttf', '.json',
+]);
+
+/**
  * Paths that bypass the auth gate entirely.
  *
  * Whitelist rules (checked in order):
- *   1. Exactly /login or starts with /login?
+ *   1. Exactly /login or starts with /login/
  *   2. Exactly /api/login (the login POST endpoint)
  *   3. Starts with /_next/
- *   4. Has a file extension (static assets: .svg, .ico, .png, .css, .js, etc.)
+ *   4. Ends with a known static-file extension (from STATIC_EXTENSIONS above)
+ *      -- checked against the full bare path, not just the last segment,
+ *      so /api/runs.json is NOT matched (it is an API route, not a static file).
+ *      A real static file like /favicon.ico or /logo.svg WILL match.
  */
 export function isWhitelisted(path: string): boolean {
   // Strip query string for matching
@@ -25,9 +39,15 @@ export function isWhitelisted(path: string): boolean {
   if (bare === '/api/login') return true;
   if (bare.startsWith('/_next/')) return true;
 
-  // Static asset: path has a file extension
-  const lastSegment = bare.split('/').pop() ?? '';
-  if (lastSegment.includes('.')) return true;
+  // Static asset: bare path ends with a known extension (case-insensitive).
+  // Explicitly exclude /api/* paths: API routes that happen to end with a known
+  // extension (e.g. /api/runs.json) must still require auth.
+  if (!bare.startsWith('/api/')) {
+    const lower = bare.toLowerCase();
+    for (const ext of STATIC_EXTENSIONS) {
+      if (lower.endsWith(ext)) return true;
+    }
+  }
 
   return false;
 }

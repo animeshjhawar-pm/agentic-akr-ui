@@ -65,7 +65,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // Page navigation -- redirect to /login with next param
+  // Page navigation -- redirect to /login with next param.
+  // We use req.nextUrl.pathname (the server-parsed pathname), which is always a
+  // same-origin path -- never a full URL -- so this is already safe without extra
+  // validation here. The login page additionally validates the next param via
+  // safeNextPath() before using it as the post-login redirect destination.
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = '/login';
   loginUrl.search = `next=${encodeURIComponent(pathname)}`;

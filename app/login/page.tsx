@@ -9,11 +9,15 @@
 
 import React, { Suspense, useRef, useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const nextPath = params.get('next') ?? '/';
+
+  // Validate the next param -- only same-origin paths (starts with '/', not '//') are
+  // accepted. Anything else (protocol-relative, absolute URL, empty) falls back to '/'.
+  const safeNext = safeNextPath(params.get('next'));
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +38,7 @@ function LoginForm() {
       });
 
       if (res.ok) {
-        router.replace(nextPath);
+        router.replace(safeNext);
       } else {
         setError('Incorrect password. Please try again.');
         if (inputRef.current) {
