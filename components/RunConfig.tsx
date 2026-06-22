@@ -25,6 +25,7 @@ interface KnobValues {
   seedTarget: number;
   gradeBatchSize: number;
   targetPages: number;
+  maxResumeRounds: number;
 }
 
 interface RunConfigProps {
@@ -49,6 +50,7 @@ const DEFAULTS: KnobValues = {
   seedTarget: 5,
   gradeBatchSize: 40,
   targetPages: 10,
+  maxResumeRounds: 2,
 };
 
 // ---------------------------------------------------------------------------
@@ -71,7 +73,9 @@ export default function RunConfig({
   function handleKnobChange(field: keyof KnobValues, raw: string) {
     const n = parseInt(raw, 10);
     if (!Number.isNaN(n)) {
-      setKnobs((prev) => ({ ...prev, [field]: n }));
+      // maxResumeRounds must be non-negative
+      const value = field === 'maxResumeRounds' ? Math.max(0, n) : n;
+      setKnobs((prev) => ({ ...prev, [field]: value }));
     }
   }
 
@@ -99,7 +103,7 @@ export default function RunConfig({
           // provider-capped at 2 concurrent, but grade/seed/SERP parallelize).
           maxConcurrentAgents: 3,
         },
-        maxResumeRounds: 0,
+        maxResumeRounds: knobs.maxResumeRounds,
       },
     };
 
@@ -288,6 +292,30 @@ export default function RunConfig({
             disabled={disabled || loading}
             className="rounded border border-border bg-surface-muted px-2 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             aria-label="Number of pages"
+          />
+        </div>
+
+        {/* maxResumeRounds */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <label
+              htmlFor="knob-max-resume-rounds"
+              className="text-xs font-medium text-on-surface-muted"
+            >
+              Max resume rounds
+            </label>
+            <Tooltip description="How many times the pipeline re-clusters with more keywords to reach the page target. Each round re-runs the clustering tail until clusters reach about 3x your No. of Pages or this limit is hit. 0 = cluster once, no resume. Higher = more coverage but more cost." />
+          </div>
+          <input
+            id="knob-max-resume-rounds"
+            type="number"
+            min={0}
+            step={1}
+            value={knobs.maxResumeRounds}
+            onChange={(e) => handleKnobChange('maxResumeRounds', e.target.value)}
+            disabled={disabled || loading}
+            className="rounded border border-border bg-surface-muted px-2 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            aria-label="Max resume rounds"
           />
         </div>
 

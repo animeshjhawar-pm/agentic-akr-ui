@@ -523,8 +523,7 @@ export default function EventLog({ log, selectedStage }: EventLogProps) {
   return (
     <div
       ref={parentRef}
-      className="overflow-auto rounded-b-lg"
-      style={{ height: '280px' }}
+      className="overflow-auto rounded-b-lg min-h-[18rem] max-h-[65vh]"
       role="log"
       aria-label="Pipeline event log"
       aria-live="polite"

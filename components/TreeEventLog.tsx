@@ -304,8 +304,7 @@ export default function TreeEventLog({ log, selectedStage }: TreeEventLogProps) 
 
   return (
     <div
-      className="overflow-auto rounded-b-lg"
-      style={{ height: '280px' }}
+      className="overflow-auto rounded-b-lg min-h-[18rem] max-h-[65vh]"
       aria-label="Pipeline event tree"
     >
       {activePhases.map((phase) => (

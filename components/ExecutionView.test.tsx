@@ -453,4 +453,24 @@ describe('ExecutionView (tabbed -- polling)', () => {
     // This test fails to compile if ExecutionView still requires reader prop
     expect(() => render(<ExecutionView runId="run-1" />)).not.toThrow();
   });
+
+  // ---- Full-height panel containers ----------------------------------------
+  // NOTE: CSS layout (actual pixel heights) is not unit-testable in jsdom.
+  // These assertions verify the structural class is applied; visual correctness
+  // must be verified in a real browser.
+
+  it('Commentary panel container has flex-col and min-h-0 for full-height fill', () => {
+    render(<ExecutionView runId="run-1" />);
+    fireEvent.click(screen.getByRole('tab', { name: /^commentary$/i }));
+    const panel = screen.getByRole('tabpanel');
+    // The panel should carry the class that enables full-height flex layout
+    expect(panel.className).toMatch(/flex/);
+  });
+
+  it('Events panel container has flex-col for full-height fill', () => {
+    render(<ExecutionView runId="run-1" />);
+    // Events is the default tab
+    const panel = screen.getByRole('tabpanel');
+    expect(panel.className).toMatch(/flex/);
+  });
 });

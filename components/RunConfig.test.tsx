@@ -72,7 +72,7 @@ describe('RunConfig', () => {
     expect(btn).not.toBeDisabled();
   });
 
-  it('default knob values are 3/20/1/5/40', () => {
+  it('default knob values are 3/20/1/5/40 and maxResumeRounds=2', () => {
     render(<RunConfig {...BASE_PROPS} selectedResourceIds={new Set(['r1'])} />);
 
     expect(
@@ -90,6 +90,9 @@ describe('RunConfig', () => {
     expect(
       (screen.getByLabelText(/grade batch/i) as HTMLInputElement).value,
     ).toBe('40');
+    expect(
+      (screen.getByLabelText(/max resume rounds/i) as HTMLInputElement).value,
+    ).toBe('2');
   });
 
   it('editing a field updates the posted knobs', async () => {
@@ -147,7 +150,35 @@ describe('RunConfig', () => {
     expect(body.knobs.agentic.seedTarget).toBe(5);
     expect(body.knobs.agentic.maxPlannerSteps).toBe(3);
     expect(body.knobs.agentic.maxConcurrentAgents).toBe(3);
-    expect(body.knobs.maxResumeRounds).toBe(0);
+    // maxResumeRounds defaults to 2 (not hardcoded 0)
+    expect(body.knobs.maxResumeRounds).toBe(2);
+  });
+
+  it('changing maxResumeRounds field updates the posted value', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(makeSuccessResponse('run-2'));
+    vi.stubGlobal('fetch', mockFetch);
+
+    const onRunStarted = vi.fn();
+    render(
+      <RunConfig
+        {...BASE_PROPS}
+        clientId="client-abc"
+        selectedResourceIds={new Set(['r1'])}
+        onRunStarted={onRunStarted}
+      />,
+    );
+
+    const resumeInput = screen.getByLabelText(/max resume rounds/i) as HTMLInputElement;
+    fireEvent.change(resumeInput, { target: { value: '5' } });
+    expect(resumeInput.value).toBe('5');
+
+    fireEvent.click(screen.getByRole('button', { name: /run akr/i }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { knobs: { maxResumeRounds: number } };
+    expect(body.knobs.maxResumeRounds).toBe(5);
   });
 
   it('calls onRunStarted with only the runId (no reader)', async () => {
@@ -258,9 +289,9 @@ describe('RunConfig', () => {
   describe('parameter tooltips', () => {
     it('each parameter has an Info trigger button that is keyboard focusable', () => {
       render(<RunConfig {...BASE_PROPS} selectedResourceIds={new Set(['r1'])} />);
-      // There should be one tooltip trigger per parameter (6 total: 5 knobs + Target Geo)
+      // There should be one tooltip trigger per parameter (7 total: 6 knobs + Target Geo)
       const infoBtns = screen.getAllByRole('button', { name: /more information/i });
-      expect(infoBtns.length).toBeGreaterThanOrEqual(6);
+      expect(infoBtns.length).toBeGreaterThanOrEqual(7);
       infoBtns.forEach((btn) => {
         expect(btn).not.toHaveAttribute('tabindex', '-1');
       });
@@ -324,7 +355,7 @@ describe('RunConfig', () => {
       expect(descEl.className).toMatch(/opacity-0/);
     });
 
-    it('tooltip descriptions are present for all 6 parameters', () => {
+    it('tooltip descriptions are present for all 7 parameters', () => {
       render(<RunConfig {...BASE_PROPS} selectedResourceIds={new Set(['r1'])} />);
       // All tooltip text should be findable in the DOM
       expect(screen.getByText(/hard spend cap/i)).toBeTruthy();
@@ -333,6 +364,8 @@ describe('RunConfig', () => {
       expect(screen.getByText(/how many starting seed keywords/i)).toBeTruthy();
       expect(screen.getByText(/how many keywords are scored per llm grading call/i)).toBeTruthy();
       expect(screen.getByText(/geographic market used for keyword research/i)).toBeTruthy();
+      // maxResumeRounds tooltip
+      expect(screen.getByText(/how many times the pipeline re-clusters/i)).toBeTruthy();
     });
   });
 });
