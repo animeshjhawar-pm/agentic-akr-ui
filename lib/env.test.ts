@@ -11,7 +11,7 @@ describe('loadUiEnv', () => {
   });
 
   it('returns databaseUrl when DATABASE_URL is present', () => {
-    const result = loadUiEnv({ DATABASE_URL: 'postgres://localhost/mydb' });
+    const result = loadUiEnv({ DATABASE_URL: 'postgres://localhost/mydb', APP_SHARED_SECRET: 'testsecret' });
     expect(result.databaseUrl).toBe('postgres://localhost/mydb');
   });
 });
