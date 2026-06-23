@@ -218,7 +218,9 @@ describe('Clusters', () => {
     global.fetch = makeFetchOk(CLUSTERS_DATA);
     render(<Clusters runId="run-1" />);
     await waitFor(() => {
-      expect(screen.getByText('listicle')).toBeInTheDocument();
+      // Target the badge span specifically -- the page-type filter dropdown also
+      // renders an <option>listicle</option>, so an unscoped getByText is ambiguous.
+      expect(screen.getByText('listicle', { selector: 'span' })).toBeInTheDocument();
     });
   });
 

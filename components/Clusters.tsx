@@ -8,7 +8,7 @@
  * Provides a JSON download button.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -223,6 +223,29 @@ export default function Clusters({ runId }: ClustersProps) {
     return () => { cancelled = true; };
   }, [runId]);
 
+  // --- Filters / sort (client-side) ---
+  const [minRelevance, setMinRelevance] = useState(0);
+  const [intentFilter, setIntentFilter] = useState<string>('all');
+  const [pageTypeFilter, setPageTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'relevance' | 'lead' | 'volume'>('relevance');
+
+  const pageTypes = useMemo(
+    () => Array.from(new Set((data?.clusters ?? []).map((c) => c.pageType))).sort(),
+    [data],
+  );
+
+  const visibleClusters = useMemo(() => {
+    const list = (data?.clusters ?? []).filter(
+      (c) =>
+        c.relevanceScore >= minRelevance &&
+        (intentFilter === 'all' || c.intent === intentFilter) &&
+        (pageTypeFilter === 'all' || c.pageType === pageTypeFilter),
+    );
+    const key =
+      sortBy === 'relevance' ? 'relevanceScore' : sortBy === 'lead' ? 'leadScore' : 'clusterVolume';
+    return [...list].sort((a, b) => (b[key] as number) - (a[key] as number));
+  }, [data, minRelevance, intentFilter, pageTypeFilter, sortBy]);
+
   function handleDownloadJson() {
     if (!data) return;
     const json = JSON.stringify(data, null, 2);
@@ -276,7 +299,7 @@ export default function Clusters({ runId }: ClustersProps) {
         <h3 className="text-sm font-semibold text-on-surface">
           Cluster Results
           <span className="ml-2 tabular-nums text-on-surface-muted font-normal">
-            ({data.clusters.length})
+            ({visibleClusters.length}{visibleClusters.length !== data.clusters.length ? ` of ${data.clusters.length}` : ''})
           </span>
         </h3>
         <button
@@ -290,12 +313,83 @@ export default function Clusters({ runId }: ClustersProps) {
         </button>
       </div>
 
-      {/* Cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data.clusters.map((cluster) => (
-          <ClusterCard key={cluster.id} cluster={cluster} />
-        ))}
+      {/* Filter / sort bar */}
+      <div className="flex items-center gap-4 flex-wrap rounded-lg border border-border bg-surface-muted px-3 py-2">
+        <label className="flex items-center gap-2 text-xs text-on-surface-muted">
+          Min relevance
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={minRelevance}
+            onChange={(e) => setMinRelevance(Number(e.target.value))}
+            aria-label="Minimum relevance score"
+            className="accent-primary"
+          />
+          <span className="tabular-nums text-on-surface w-7">{minRelevance}</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 text-xs text-on-surface-muted">
+          Intent
+          <select
+            value={intentFilter}
+            onChange={(e) => setIntentFilter(e.target.value)}
+            aria-label="Filter by intent"
+            className="rounded border border-border bg-surface px-2 py-1 text-xs text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="all">All</option>
+            <option value="transactional">Transactional</option>
+            <option value="commercial">Commercial</option>
+            <option value="informational">Informational</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        {pageTypes.length > 1 && (
+          <label className="flex items-center gap-1.5 text-xs text-on-surface-muted">
+            Page type
+            <select
+              value={pageTypeFilter}
+              onChange={(e) => setPageTypeFilter(e.target.value)}
+              aria-label="Filter by page type"
+              className="rounded border border-border bg-surface px-2 py-1 text-xs text-on-surface capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <option value="all">All</option>
+              {pageTypes.map((pt) => (
+                <option key={pt} value={pt}>{pt}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <label className="flex items-center gap-1.5 text-xs text-on-surface-muted ml-auto">
+          Sort by
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'relevance' | 'lead' | 'volume')}
+            aria-label="Sort clusters"
+            className="rounded border border-border bg-surface px-2 py-1 text-xs text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="relevance">Relevance</option>
+            <option value="lead">Lead score</option>
+            <option value="volume">Cluster volume</option>
+          </select>
+        </label>
       </div>
+
+      {/* Cards grid */}
+      {visibleClusters.length === 0 ? (
+        <div className="flex items-center justify-center py-12 text-sm text-on-surface-muted">
+          No clusters match the current filters.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleClusters.map((cluster) => (
+            <ClusterCard key={cluster.id} cluster={cluster} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
