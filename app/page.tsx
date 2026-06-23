@@ -188,79 +188,68 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Profile card */}
-            <div className="rounded-xl bg-surface border border-border mx-3 my-2 p-4">
-              <div className="flex items-center gap-1.5 mb-3">
-                <User size={14} aria-hidden="true" className="text-on-surface-muted" />
-                <span className="text-xs font-semibold text-on-surface-muted uppercase tracking-wider">Profile</span>
-              </div>
-
-              {!selectedClient && !detailLoading && (
-                <p className="text-sm text-on-surface-muted">Select a client to view their profile.</p>
-              )}
-
-              {detailLoading && (
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-surface-muted rounded w-3/4" />
-                  <div className="h-4 bg-surface-muted rounded w-1/2" />
-                  <div className="h-4 bg-surface-muted rounded w-2/3" />
-                </div>
-              )}
-
-              {detailError && (
+            {/* Client workspace -- one cohesive panel (profile + resources + run
+                config) with a SINGLE loading/empty state, so picking a client
+                reads as one step instead of three sequential cards. */}
+            <div className="rounded-xl bg-surface border border-border mx-3 my-2 overflow-hidden">
+              {!selectedClient ? (
+                <p className="p-4 text-sm text-on-surface-muted">
+                  Select a client above to view its profile, choose resources, and run AKR.
+                </p>
+              ) : detailError ? (
                 <div
                   role="alert"
-                  className="flex items-center gap-2 rounded-md bg-danger-surface px-3 py-2 text-sm text-danger"
+                  className="m-4 flex items-center gap-2 rounded-md bg-danger-surface px-3 py-2 text-sm text-danger"
                 >
                   <AlertCircle size={14} aria-hidden="true" />
                   {detailError}
                 </div>
-              )}
-
-              {clientDetail && !detailLoading && (
-                <ProfilePanel profile={clientDetail.profile} />
-              )}
-            </div>
-
-            {/* Resource card */}
-            <div className="rounded-xl bg-surface border border-border mx-3 my-2 p-4">
-              {!clientDetail && !detailLoading && (
-                <p className="text-sm text-on-surface-muted">
-                  {selectedClient
-                    ? 'Loading resources...'
-                    : 'Select a client to choose resources.'}
-                </p>
-              )}
-
-              {detailLoading && (
-                <div className="animate-pulse space-y-2">
+              ) : detailLoading || !clientDetail ? (
+                /* Single unified skeleton covering profile + resources */
+                <div className="p-4 animate-pulse space-y-3" aria-label="Loading client">
+                  <div className="h-4 bg-surface-muted rounded w-3/4" />
                   <div className="h-4 bg-surface-muted rounded w-1/2" />
+                  <div className="h-px bg-border my-2" />
                   <div className="h-8 bg-surface-muted rounded w-full" />
                   <div className="h-10 bg-surface-muted rounded w-full" />
                   <div className="h-10 bg-surface-muted rounded w-full" />
                 </div>
-              )}
+              ) : (
+                <>
+                  {/* Profile */}
+                  <section className="p-4">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <User size={14} aria-hidden="true" className="text-on-surface-muted" />
+                      <span className="text-xs font-semibold text-on-surface-muted uppercase tracking-wider">Profile</span>
+                    </div>
+                    <ProfilePanel profile={clientDetail.profile} />
+                  </section>
 
-              {clientDetail && !detailLoading && (
-                <ResourceSelect
-                  resources={clientDetail.resources}
-                  value={selectedResourceIds}
-                  onChange={setSelectedResourceIds}
-                />
-              )}
-            </div>
+                  <div className="border-t border-border" />
 
-            {/* RunConfig card -- always visible; disabled during/after a run */}
-            <div className="rounded-xl bg-surface border border-border mx-3 my-2 p-4">
-              <RunConfig
-                clientId={selectedClient?.id ?? ''}
-                selectedResourceIds={selectedResourceIds}
-                targetGeoDefault={
-                  clientDetail?.profile.geo.targetGeographies[0] ?? ''
-                }
-                onRunStarted={handleRunStarted}
-                disabled={false}
-              />
+                  {/* Resources */}
+                  <section className="p-4">
+                    <ResourceSelect
+                      resources={clientDetail.resources}
+                      value={selectedResourceIds}
+                      onChange={setSelectedResourceIds}
+                    />
+                  </section>
+
+                  <div className="border-t border-border" />
+
+                  {/* Run config */}
+                  <section className="p-4">
+                    <RunConfig
+                      clientId={selectedClient.id}
+                      selectedResourceIds={selectedResourceIds}
+                      targetGeoDefault={clientDetail.profile.geo.targetGeographies[0] ?? ''}
+                      onRunStarted={handleRunStarted}
+                      disabled={false}
+                    />
+                  </section>
+                </>
+              )}
             </div>
           </aside>
         ) : (
