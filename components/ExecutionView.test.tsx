@@ -107,25 +107,26 @@ describe('ExecutionView (tabbed -- polling)', () => {
 
   // ---- Tab structure -------------------------------------------------------
 
-  it('renders 4 tabs with role=tab (no Artifacts in hosted UI)', () => {
+  it('renders 5 tabs with role=tab (incl. Artifacts)', () => {
     render(<ExecutionView runId="run-1" />);
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
   });
 
-  it('tabs are labelled Commentary, Events, Keywords, Clusters', () => {
+  it('tabs are labelled Commentary, Events, Keywords, Clusters, Artifacts', () => {
     render(<ExecutionView runId="run-1" />);
 
     expect(screen.getByRole('tab', { name: /^commentary$/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /^events$/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /^keywords$/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /^clusters$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^artifacts$/i })).toBeInTheDocument();
   });
 
-  it('does not render an Artifacts tab', () => {
+  it('renders an Artifacts tab', () => {
     render(<ExecutionView runId="run-1" />);
-    expect(screen.queryByRole('tab', { name: /^artifacts$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^artifacts$/i })).toBeInTheDocument();
   });
 
   it('has a tablist', () => {
@@ -407,25 +408,25 @@ describe('ExecutionView (tabbed -- polling)', () => {
     expect(screen.getByRole('tab', { name: /^clusters$/i })).toHaveFocus();
   });
 
-  it('ArrowRight wraps from Clusters back to Commentary (idx 0)', () => {
+  it('ArrowRight wraps from Artifacts (last) back to Commentary (idx 0)', () => {
     render(<ExecutionView runId="run-1" />);
 
-    fireEvent.click(screen.getByRole('tab', { name: /^clusters$/i }));
-    const clustersTab = screen.getByRole('tab', { name: /^clusters$/i });
-    clustersTab.focus();
-    fireEvent.keyDown(clustersTab, { key: 'ArrowRight' });
+    fireEvent.click(screen.getByRole('tab', { name: /^artifacts$/i }));
+    const artifactsTab = screen.getByRole('tab', { name: /^artifacts$/i });
+    artifactsTab.focus();
+    fireEvent.keyDown(artifactsTab, { key: 'ArrowRight' });
 
     expect(screen.getByRole('tab', { name: /^commentary$/i })).toHaveFocus();
   });
 
-  it('ArrowLeft wraps from Commentary (idx 0) to Clusters', () => {
+  it('ArrowLeft wraps from Commentary (idx 0) to Artifacts (last)', () => {
     render(<ExecutionView runId="run-1" />);
 
     const commentaryTab = screen.getByRole('tab', { name: /^commentary$/i });
     commentaryTab.focus();
     fireEvent.keyDown(commentaryTab, { key: 'ArrowLeft' });
 
-    expect(screen.getByRole('tab', { name: /^clusters$/i })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: /^artifacts$/i })).toHaveFocus();
   });
 
   it('ArrowLeft wraps from Events to Commentary', () => {

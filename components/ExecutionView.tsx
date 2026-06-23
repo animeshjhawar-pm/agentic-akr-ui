@@ -21,6 +21,7 @@ import EventLog from './EventLog';
 import TreeEventLog from './TreeEventLog';
 import Results from './Results';
 import Clusters from './Clusters';
+import Artifacts from './Artifacts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,13 +160,14 @@ function ViewToggle({ view, onChange }: ViewToggleProps) {
 // Tab ids
 // ---------------------------------------------------------------------------
 
-type TabId = 'commentary' | 'events' | 'keywords' | 'clusters';
+type TabId = 'commentary' | 'events' | 'keywords' | 'clusters' | 'artifacts';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'commentary', label: 'Commentary' },
   { id: 'events', label: 'Events' },
   { id: 'keywords', label: 'Keywords' },
   { id: 'clusters', label: 'Clusters' },
+  { id: 'artifacts', label: 'Artifacts' },
 ];
 
 function tabButtonId(id: TabId) {
@@ -375,6 +377,17 @@ export default function ExecutionView({ runId, resourceNames, onStreamDone }: Ex
           <section aria-label="Cluster results">
             <Clusters runId={runId} />
           </section>
+        </div>
+      )}
+
+      {/* Artifacts */}
+      {activeTab === 'artifacts' && (
+        <div
+          id={tabPanelId('artifacts')}
+          role="tabpanel"
+          aria-labelledby={tabButtonId('artifacts')}
+        >
+          <Artifacts runId={runId} resourceNames={resourceNames} />
         </div>
       )}
     </div>

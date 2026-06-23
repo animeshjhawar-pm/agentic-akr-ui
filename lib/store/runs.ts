@@ -200,3 +200,36 @@ export async function getRunKeywords(
     source: row.source != null ? (row.source as string) : null,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// run_artifacts
+// ---------------------------------------------------------------------------
+
+export interface ArtifactRow {
+  id: number;
+  kind: string;
+  resourceId: string | null;
+  seq: number | null;
+  payload: unknown;
+  createdAt: string | null;
+}
+
+/** Return all artifacts for a run, oldest first. Empty if the table is absent. */
+export async function getRunArtifacts(pool: QueryClient, runId: string): Promise<ArtifactRow[]> {
+  const text =
+    'SELECT id, kind, resource_id, seq, payload, created_at FROM run_artifacts WHERE run_id=$1 ORDER BY id ASC';
+  try {
+    const result = await pool.query(text, [runId]);
+    return result.rows.map((row) => ({
+      id: Number(row.id),
+      kind: row.kind as string,
+      resourceId: (row.resource_id as string | null) ?? null,
+      seq: (row.seq as number | null) ?? null,
+      payload: row.payload,
+      createdAt: row.created_at != null ? String(row.created_at) : null,
+    }));
+  } catch {
+    // run_artifacts may not exist yet (engine change not deployed) -> empty.
+    return [];
+  }
+}
