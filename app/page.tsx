@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks, MousePointerClick } from 'lucide-react';
 import type { ClientRow, ClientProfile, ResourceRow } from '@/lib/queries';
 import ClientPicker from '@/components/ClientPicker';
 import ProfilePanel from '@/components/ProfilePanel';
@@ -49,6 +49,8 @@ export default function HomePage() {
 
   // --- UI state ---
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Right pane shows the landing prompt until the user opens "All Runs" or starts a run.
+  const [showRuns, setShowRuns] = useState(false);
 
   // Right content pane -- scrolled to top when a run is triggered.
   const contentRef = useRef<HTMLElement>(null);
@@ -88,6 +90,7 @@ export default function HomePage() {
           : [{ runId, clientId, resourceCount: selectedResourceIds.size }, ...prev],
       );
       setSelectedRunId(runId);
+      setShowRuns(true);
       // Scroll the content pane (and window) to the top so the new run is visible.
       contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       if (typeof window !== 'undefined') {
@@ -129,8 +132,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">
-      {/* Header */}
-      <header className="bg-surface border-b border-border h-14 px-6 flex items-center justify-between flex-shrink-0">
+      {/* Header -- sticky on top */}
+      <header className="sticky top-0 z-30 bg-surface border-b border-border h-14 px-6 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center">
           <img src="/gush_logo.svg" width="22" height="22" alt="Gushwork" />
           <span className="ml-3 text-sm font-semibold text-on-surface">Agentic AKR</span>
@@ -139,7 +142,7 @@ export default function HomePage() {
         <button
           type="button"
           aria-label="Show all runs"
-          onClick={() => setSelectedRunId(null)}
+          onClick={() => { setShowRuns(true); setSelectedRunId(null); }}
           className="bg-surface-elevated border border-border rounded-lg px-3 py-1.5 text-xs text-on-surface hover:bg-border cursor-pointer flex items-center gap-2 min-h-[44px]"
         >
           <ListChecks size={14} aria-hidden="true" />
@@ -270,18 +273,29 @@ export default function HomePage() {
           </aside>
         )}
 
-        {/* Right content section -- live run dashboard (history + in-flight runs) */}
+        {/* Right content section -- landing prompt by default; run dashboard once
+            "All Runs" is opened or a run is started. */}
         <section ref={contentRef} className="flex-1 overflow-y-auto p-4">
-          <RunHistory
-            selectedRunId={selectedRunId}
-            onSelectRun={setSelectedRunId}
-            optimisticRuns={optimisticRuns}
-            resourceNames={Object.fromEntries(
-              (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
-            )}
-            clientNames={clientNames}
-            scopeClientId={selectedClient?.id ?? null}
-          />
+          {showRuns || selectedRunId ? (
+            <RunHistory
+              selectedRunId={selectedRunId}
+              onSelectRun={setSelectedRunId}
+              optimisticRuns={optimisticRuns}
+              resourceNames={Object.fromEntries(
+                (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
+              )}
+              clientNames={clientNames}
+              scopeClientId={selectedClient?.id ?? null}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-on-surface-muted px-6">
+              <MousePointerClick size={40} aria-hidden="true" className="mb-4 opacity-30" />
+              <p className="text-base font-medium text-on-surface">Choose a client to initiate runs</p>
+              <p className="text-sm mt-1 max-w-sm">
+                Select a client and resources on the left, then Run AKR. View past runs anytime via &ldquo;All Runs&rdquo;.
+              </p>
+            </div>
+          )}
         </section>
       </main>
     </div>
