@@ -183,7 +183,13 @@ function tabPanelId(id: TabId) {
 // ---------------------------------------------------------------------------
 
 export default function ExecutionView({ runId, resourceNames, onStreamDone }: ExecutionViewProps) {
-  const { stages, log, totals, streamDone, stalled } = useRunPolling(runId);
+  const { stages, log, totals, streamDone, stalled, liveSpend, liveSelected, liveClusters } =
+    useRunPolling(runId);
+  // Prefer live totals from the runs row (spend updates in real time); fall back
+  // to event-derived totals (which only fill in at run completion).
+  const headerSpend = liveSpend ?? totals.spend;
+  const headerSelected = liveSelected ?? totals.selected;
+  const headerPages = liveClusters ?? totals.pages;
 
   // Notify the parent exactly once when the run finishes, so the run
   // lifecycle can advance to 'done' (re-enabling RunConfig for a new run).
@@ -253,9 +259,9 @@ export default function ExecutionView({ runId, resourceNames, onStreamDone }: Ex
           <span className="font-mono text-on-surface-muted text-xs">{runId}</span>
         </h2>
         <TotalsHeader
-          spend={totals.spend}
-          selected={totals.selected}
-          pages={totals.pages}
+          spend={headerSpend}
+          selected={headerSelected}
+          pages={headerPages}
           streamDone={streamDone}
           stalled={stalled}
         />

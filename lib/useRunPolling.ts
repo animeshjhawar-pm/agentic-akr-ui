@@ -41,13 +41,18 @@ type PollAction =
   | { type: 'append'; events: RunEvent[] }
   | { type: 'stalled' }
   | { type: 'done' }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'totals'; spend: number | null; selected: number | null; clusters: number | null };
 
 interface PollState {
   reduced: RunReducerState;
   streamDone: boolean;
   stalled: boolean;
   error: string | null;
+  // Live totals from the runs row (spend updates in real time during a run).
+  liveSpend: number | null;
+  liveSelected: number | null;
+  liveClusters: number | null;
 }
 
 function makeInitialPollState(): PollState {
@@ -56,6 +61,9 @@ function makeInitialPollState(): PollState {
     streamDone: false,
     stalled: false,
     error: null,
+    liveSpend: null,
+    liveSelected: null,
+    liveClusters: null,
   };
 }
 
@@ -77,6 +85,14 @@ function pollReducer(state: PollState, action: PollAction): PollState {
       return { ...state, streamDone: true, stalled: false };
     case 'error':
       return { ...state, error: action.message };
+    case 'totals':
+      // Keep the last known value when a field comes back null (not yet set).
+      return {
+        ...state,
+        liveSpend: action.spend ?? state.liveSpend,
+        liveSelected: action.selected ?? state.liveSelected,
+        liveClusters: action.clusters ?? state.liveClusters,
+      };
   }
 }
 
@@ -90,6 +106,9 @@ export type UseRunPollingResult = RunReducerState & {
   streamDone: boolean;
   stalled: boolean;
   error: string | null;
+  liveSpend: number | null;
+  liveSelected: number | null;
+  liveClusters: number | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -174,11 +193,22 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
           events: RunEvent[];
           maxSeq: number;
           status: string;
+          spend?: number | null;
+          selected?: number | null;
+          clusters?: number | null;
         };
 
         const newEvents: RunEvent[] = Array.isArray(data.events) ? data.events : [];
         const maxSeq: number = typeof data.maxSeq === 'number' ? data.maxSeq : cursorRef.current;
         const status: string = typeof data.status === 'string' ? data.status : 'pending';
+
+        // Live totals from the runs row (spend updates in real time).
+        dispatch({
+          type: 'totals',
+          spend: typeof data.spend === 'number' ? data.spend : null,
+          selected: typeof data.selected === 'number' ? data.selected : null,
+          clusters: typeof data.clusters === 'number' ? data.clusters : null,
+        });
 
         // Advance cursor
         if (maxSeq > cursorRef.current) {
@@ -231,5 +261,8 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
     streamDone: pollState.streamDone,
     stalled: pollState.stalled,
     error: pollState.error,
+    liveSpend: pollState.liveSpend,
+    liveSelected: pollState.liveSelected,
+    liveClusters: pollState.liveClusters,
   };
 }

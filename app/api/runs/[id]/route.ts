@@ -35,5 +35,10 @@ export async function GET(
     events,
     maxSeq,
     status: run?.status ?? 'pending',
+    // Live totals from the runs row (spend updates in real time during a run;
+    // selected/clusters populate near completion).
+    spend: run?.spend ?? null,
+    selected: run?.selected ?? null,
+    clusters: run?.clusters ?? null,
   });
 }
