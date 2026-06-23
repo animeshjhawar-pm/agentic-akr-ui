@@ -58,11 +58,11 @@ describe('insertRunRequest', () => {
     expect(sql).toMatch(/RETURNING id/i);
     expect(id).toBe('req-1');
 
-    // params[0] = id, [1] = clientId, [2] = resourceIds, [3] = params_json string, [4] = 'pending'
+    // params[0] = id, [1] = clientId, [2] = resourceIds, [3] = params_json string, [4] = 'queued'
     expect(params[0]).toBe('req-1');
     expect(params[1]).toBe('cli-1');
     expect(params[2]).toEqual(['page-a', 'page-b']);
-    expect(params[4]).toBe('pending');
+    expect(params[4]).toBe('queued');
   });
 
   it('embeds runInput inside params_json', async () => {

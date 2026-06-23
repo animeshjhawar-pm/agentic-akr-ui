@@ -28,7 +28,11 @@ export interface InsertRunRequestArgs {
 }
 
 /**
- * Inserts a new pending run_request row.
+ * Inserts a new queued run_request row.
+ *
+ * status MUST be 'queued' -- the engine's claimNextRunRequest only claims rows
+ * WHERE status = 'queued'. Any other literal (e.g. 'pending') leaves the request
+ * permanently unclaimed and the run stalls.
  *
  * params_json is built as `{ ...params, runInput }` so the engine's
  * claimNextRunRequest can surface runInput alongside any extra parameters.
@@ -42,7 +46,7 @@ export async function insertRunRequest(
   const paramsJson = { ...(params ?? {}), runInput };
   const text =
     'INSERT INTO run_requests (id, client_id, resource_ids, params_json, status) VALUES ($1,$2,$3,$4,$5) RETURNING id';
-  const values = [id, clientId, resourceIds, JSON.stringify(paramsJson), 'pending'];
+  const values = [id, clientId, resourceIds, JSON.stringify(paramsJson), 'queued'];
   const result = await pool.query(text, values);
   return result.rows[0].id as string;
 }

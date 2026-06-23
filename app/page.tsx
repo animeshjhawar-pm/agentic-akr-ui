@@ -12,21 +12,18 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, History, ChevronLeft, ChevronRight, User, Activity } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks } from 'lucide-react';
 import type { ClientRow, ClientProfile, ResourceRow } from '@/lib/queries';
 import ClientPicker from '@/components/ClientPicker';
 import ProfilePanel from '@/components/ProfilePanel';
 import ResourceSelect from '@/components/ResourceSelect';
 import RunConfig from '@/components/RunConfig';
-import ExecutionView from '@/components/ExecutionView';
-import RunHistory from '@/components/RunHistory';
+import RunHistory, { type OptimisticRun } from '@/components/RunHistory';
 
 interface ClientDetail {
   profile: ClientProfile;
   resources: ResourceRow[];
 }
-
-type RunState = 'idle' | 'running' | 'done';
 
 export default function HomePage() {
   // --- Primary state (lifted for Tasks 11/12) ---
@@ -34,9 +31,12 @@ export default function HomePage() {
   const [clientDetail, setClientDetail] = useState<ClientDetail | null>(null);
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
 
-  // --- Run state (lifted for Tasks 11/12) ---
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
-  const [runState, setRunState] = useState<RunState>('idle');
+  // --- Run dashboard state (multi-run) ---
+  // selectedRunId: which run's detail is expanded in the dashboard.
+  // optimisticRuns: runs triggered this session, shown immediately as 'queued'
+  // until the engine claims them and the server list catches up.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [optimisticRuns, setOptimisticRuns] = useState<OptimisticRun[]>([]);
 
   // --- Client list state ---
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -48,7 +48,6 @@ export default function HomePage() {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   // --- UI state ---
-  const [showHistory, setShowHistory] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Fetch client list on mount
@@ -74,20 +73,19 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Handle run started: receive runId, hand off to ExecutionView (polling handles the rest)
+  // Handle run started: a new run was enqueued. Show it optimistically as
+  // 'queued' and open its detail. RunConfig stays enabled, so multiple runs
+  // can be triggered; the engine executes up to 5 in parallel.
   const handleRunStarted = useCallback(
     (runId: string) => {
-      setActiveRunId(runId);
-      setRunState('running');
+      const clientId = selectedClient?.id ?? '';
+      setOptimisticRuns((prev) =>
+        prev.some((r) => r.runId === runId) ? prev : [{ runId, clientId }, ...prev],
+      );
+      setSelectedRunId(runId);
     },
-    [],
+    [selectedClient],
   );
-
-  // ExecutionView reports the SSE stream finished. Move the lifecycle to 'done'
-  // so RunConfig re-enables and the user can start a second run without a refresh.
-  const handleStreamDone = useCallback(() => {
-    setRunState((s) => (s === 'running' ? 'done' : s));
-  }, []);
 
   // Fetch client detail when selection changes
   const handleSelectClient = useCallback((client: ClientRow) => {
@@ -124,12 +122,12 @@ export default function HomePage() {
         </div>
         <button
           type="button"
-          aria-label="Toggle run history"
-          onClick={() => setShowHistory((h) => !h)}
+          aria-label="Show all runs"
+          onClick={() => setSelectedRunId(null)}
           className="bg-surface-elevated border border-border rounded-lg px-3 py-1.5 text-xs text-on-surface hover:bg-border cursor-pointer flex items-center gap-2 min-h-[44px]"
         >
-          <History size={14} aria-hidden="true" />
-          Run History
+          <ListChecks size={14} aria-hidden="true" />
+          All Runs
         </button>
       </header>
 
@@ -240,7 +238,7 @@ export default function HomePage() {
                   clientDetail?.profile.geo.targetGeographies[0] ?? ''
                 }
                 onRunStarted={handleRunStarted}
-                disabled={runState === 'running'}
+                disabled={false}
               />
             </div>
           </aside>
@@ -258,30 +256,16 @@ export default function HomePage() {
           </aside>
         )}
 
-        {/* Right content section */}
+        {/* Right content section -- live run dashboard (history + in-flight runs) */}
         <section className="flex-1 overflow-y-auto p-4">
-          {/* Execution view when running or done */}
-          {(runState === 'running' || runState === 'done') && activeRunId && (
-            <ExecutionView
-              key={activeRunId}
-              runId={activeRunId}
-              resourceNames={Object.fromEntries((clientDetail?.resources ?? []).map((r) => [r.id, r.name]))}
-              onStreamDone={handleStreamDone}
-            />
-          )}
-
-          {/* Run history */}
-          {runState === 'idle' && showHistory && (
-            <RunHistory />
-          )}
-
-          {/* Idle placeholder */}
-          {runState === 'idle' && !showHistory && (
-            <div className="flex flex-col items-center justify-center h-full text-on-surface-muted">
-              <Activity size={40} aria-hidden="true" className="mb-4 opacity-30" />
-              <p className="text-sm">Select a client and resources, then run AKR.</p>
-            </div>
-          )}
+          <RunHistory
+            selectedRunId={selectedRunId}
+            onSelectRun={setSelectedRunId}
+            optimisticRuns={optimisticRuns}
+            resourceNames={Object.fromEntries(
+              (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
+            )}
+          />
         </section>
       </main>
     </div>

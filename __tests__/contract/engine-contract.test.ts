@@ -96,7 +96,7 @@ describe('insert contract: insertRunRequest', () => {
       ? JSON.parse(params[3] as string)
       : params[3];
     expect(parsed).toMatchObject({ runInput });
-    expect(params[4]).toBe('pending');
+    expect(params[4]).toBe('queued');
   });
 
   it('wraps extra params alongside runInput in params_json', async () => {
