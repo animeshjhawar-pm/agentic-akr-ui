@@ -18,7 +18,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { History, ChevronRight, Loader, AlertCircle, RefreshCw } from 'lucide-react';
-import ExecutionView from './ExecutionView';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,8 +50,6 @@ interface RunHistoryProps {
   onSelectRun?: (runId: string | null) => void;
   /** Runs triggered this session, merged in until the server list catches up. */
   optimisticRuns?: OptimisticRun[];
-  /** resourceId -> display name map, threaded to the selected run's ExecutionView. */
-  resourceNames?: Record<string, string>;
   /** clientId -> client display name, for the run row labels. */
   clientNames?: Record<string, string>;
   /** When set, the list defaults to showing only this client's runs (with a toggle). */
@@ -114,7 +111,6 @@ export default function RunHistory({
   selectedRunId = null,
   onSelectRun,
   optimisticRuns = [],
-  resourceNames,
   clientNames,
   scopeClientId = null,
 }: RunHistoryProps) {
@@ -279,13 +275,6 @@ export default function RunHistory({
                     />
                   </span>
                 </button>
-
-                {/* Inline detail for the open run */}
-                {isOpen && (
-                  <div className="mt-2 mb-3 rounded-xl border border-border bg-surface p-4">
-                    <ExecutionView runId={run.runId} resourceNames={resourceNames} />
-                  </div>
-                )}
               </li>
             );
           })}

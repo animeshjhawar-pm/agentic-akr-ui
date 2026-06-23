@@ -12,13 +12,14 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks, MousePointerClick } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks, MousePointerClick, ArrowLeft } from 'lucide-react';
 import type { ClientRow, ClientProfile, ResourceRow } from '@/lib/queries';
 import ClientPicker from '@/components/ClientPicker';
 import ProfilePanel from '@/components/ProfilePanel';
 import ResourceSelect from '@/components/ResourceSelect';
 import RunConfig from '@/components/RunConfig';
 import RunHistory, { type OptimisticRun } from '@/components/RunHistory';
+import ExecutionView from '@/components/ExecutionView';
 
 interface ClientDetail {
   profile: ClientProfile;
@@ -273,21 +274,41 @@ export default function HomePage() {
           </aside>
         )}
 
-        {/* Right content section -- landing prompt by default; run dashboard once
-            "All Runs" is opened or a run is started. */}
+        {/* Right content section -- three distinct views:
+            1. Run View: a single run's live/replay detail (when a run is selected)
+            2. Past Runs View: the run list (when "All Runs" is open)
+            3. Landing prompt (default) */}
         <section ref={contentRef} className="flex-1 overflow-y-auto p-4">
-          {showRuns || selectedRunId ? (
+          {selectedRunId ? (
+            /* --- Run View (dedicated, full pane) --- */
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedRunId(null)}
+                className="self-start inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-on-surface hover:bg-surface-muted cursor-pointer"
+              >
+                <ArrowLeft size={13} aria-hidden="true" />
+                All Runs
+              </button>
+              <ExecutionView
+                key={selectedRunId}
+                runId={selectedRunId}
+                resourceNames={Object.fromEntries(
+                  (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
+                )}
+              />
+            </div>
+          ) : showRuns ? (
+            /* --- Past Runs View (list) --- */
             <RunHistory
-              selectedRunId={selectedRunId}
+              selectedRunId={null}
               onSelectRun={setSelectedRunId}
               optimisticRuns={optimisticRuns}
-              resourceNames={Object.fromEntries(
-                (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
-              )}
               clientNames={clientNames}
               scopeClientId={selectedClient?.id ?? null}
             />
           ) : (
+            /* --- Landing prompt --- */
             <div className="flex flex-col items-center justify-center h-full text-center text-on-surface-muted px-6">
               <MousePointerClick size={40} aria-hidden="true" className="mb-4 opacity-30" />
               <p className="text-base font-medium text-on-surface">Choose a client to initiate runs</p>
