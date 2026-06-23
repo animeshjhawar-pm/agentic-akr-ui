@@ -68,9 +68,12 @@ describe('Commentary - grade/batch', () => {
     detail: 'batch graded',
   };
 
-  it('renders "Graded 20 keywords -- kept 12 (avg score 7.3), dropped 6."', () => {
+  it('reports true dropped = graded - kept, with out-of-scope split', () => {
     render(<Commentary events={[evt]} />);
-    expect(screen.getByText('Graded 20 keywords -- kept 12 (avg score 7.3), dropped 6.')).toBeInTheDocument();
+    // graded 20, kept 12 -> dropped 8 (rejected 6 + out-of-scope 2)
+    expect(
+      screen.getByText('Graded 20 keywords -- kept 12 (avg score 7.3), dropped 8 (2 out-of-scope).'),
+    ).toBeInTheDocument();
   });
 });
 

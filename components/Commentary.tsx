@@ -106,7 +106,12 @@ function toSentence(evt: RunEvent): string | null {
 
     case 'grade': {
       if (evt.type === 'batch') {
-        return `Graded ${evt.graded} keywords -- kept ${evt.kept} (avg score ${evt.avgScore.toFixed(1)}), dropped ${evt.rejected}.`;
+        // Dropped = everything not kept (graded_fail + out_of_scope). Reporting
+        // only evt.rejected understated it (e.g. "graded 40, kept 0, dropped 7"
+        // hid 33 out-of-scope). Show the true dropped, with the out-of-scope split.
+        const dropped = evt.graded - evt.kept;
+        const oos = evt.outOfScope > 0 ? ` (${evt.outOfScope} out-of-scope)` : '';
+        return `Graded ${evt.graded} keywords -- kept ${evt.kept} (avg score ${evt.avgScore.toFixed(1)}), dropped ${dropped}${oos}.`;
       }
       return null;
     }
