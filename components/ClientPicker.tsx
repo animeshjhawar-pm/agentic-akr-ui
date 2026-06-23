@@ -16,6 +16,8 @@ interface ClientPickerProps {
   selectedId: string | null;
   onSelect: (client: ClientRow) => void;
   loading?: boolean;
+  /** Optional control rendered on the search row, right-aligned (e.g. collapse). */
+  rightAction?: React.ReactNode;
 }
 
 function useDebounce(val: string, delay: number): string {
@@ -32,6 +34,7 @@ export default function ClientPicker({
   selectedId,
   onSelect,
   loading = false,
+  rightAction,
 }: ClientPickerProps) {
   const [searchRaw, setSearchRaw] = useState('');
   const query = useDebounce(searchRaw, 200);
@@ -52,25 +55,28 @@ export default function ClientPicker({
         Client
       </label>
 
-      {/* Search input */}
-      <div className="relative">
-        <Search
-          size={14}
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted pointer-events-none"
-          aria-hidden="true"
-        />
-        <input
-          ref={inputRef}
-          id="client-search"
-          type="search"
-          placeholder="Search clients..."
-          value={searchRaw}
-          onChange={(e) => setSearchRaw(e.target.value)}
-          className="w-full rounded-lg border border-border bg-surface-muted pl-8 pr-3 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
-          aria-label="Search clients"
-          aria-autocomplete="list"
-          aria-controls="client-list"
-        />
+      {/* Search input (+ optional right-aligned action, e.g. collapse button) */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted pointer-events-none"
+            aria-hidden="true"
+          />
+          <input
+            ref={inputRef}
+            id="client-search"
+            type="search"
+            placeholder="Search clients..."
+            value={searchRaw}
+            onChange={(e) => setSearchRaw(e.target.value)}
+            className="w-full rounded-lg border border-border bg-surface-muted pl-8 pr-3 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label="Search clients"
+            aria-autocomplete="list"
+            aria-controls="client-list"
+          />
+        </div>
+        {rightAction}
       </div>
 
       {/* Client list */}

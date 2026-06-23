@@ -11,7 +11,7 @@
  * These will be consumed by RunConfig (Task 11) and ExecutionView (Task 12).
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, User, ListChecks } from 'lucide-react';
 import type { ClientRow, ClientProfile, ResourceRow } from '@/lib/queries';
 import ClientPicker from '@/components/ClientPicker';
@@ -50,6 +50,9 @@ export default function HomePage() {
   // --- UI state ---
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Right content pane -- scrolled to top when a run is triggered.
+  const contentRef = useRef<HTMLElement>(null);
+
   // Fetch client list on mount
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +86,11 @@ export default function HomePage() {
         prev.some((r) => r.runId === runId) ? prev : [{ runId, clientId }, ...prev],
       );
       setSelectedRunId(runId);
+      // Scroll the content pane (and window) to the top so the new run is visible.
+      contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     },
     [selectedClient],
   );
@@ -136,20 +144,8 @@ export default function HomePage() {
         {/* Left aside */}
         {sidebarOpen ? (
           <aside className="w-[372px] flex-shrink-0 border-r border-border bg-surface flex flex-col overflow-y-auto relative">
-            {/* Collapse button */}
-            <div className="flex justify-end px-3 pt-3">
-              <button
-                type="button"
-                aria-label="Collapse sidebar"
-                onClick={() => setSidebarOpen(false)}
-                className="p-1 rounded hover:bg-surface-muted text-on-surface-muted cursor-pointer flex items-center justify-center min-h-[44px] min-w-[44px]"
-              >
-                <ChevronLeft size={16} aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* ClientPicker card */}
-            <div className="rounded-xl bg-surface border border-border mx-3 my-2 p-4">
+            {/* ClientPicker card -- collapse button is aligned to the search bar */}
+            <div className="rounded-xl bg-surface border border-border mx-3 mt-3 mb-2 p-4">
               {clientsError && (
                 <div
                   role="alert"
@@ -164,6 +160,16 @@ export default function HomePage() {
                 selectedId={selectedClient?.id ?? null}
                 onSelect={handleSelectClient}
                 loading={clientsLoading}
+                rightAction={
+                  <button
+                    type="button"
+                    aria-label="Collapse sidebar"
+                    onClick={() => setSidebarOpen(false)}
+                    className="shrink-0 p-2 rounded-lg border border-border hover:bg-surface-muted text-on-surface-muted cursor-pointer flex items-center justify-center h-[38px] w-[38px]"
+                  >
+                    <ChevronLeft size={16} aria-hidden="true" />
+                  </button>
+                }
               />
             </div>
 
@@ -257,7 +263,7 @@ export default function HomePage() {
         )}
 
         {/* Right content section -- live run dashboard (history + in-flight runs) */}
-        <section className="flex-1 overflow-y-auto p-4">
+        <section ref={contentRef} className="flex-1 overflow-y-auto p-4">
           <RunHistory
             selectedRunId={selectedRunId}
             onSelectRun={setSelectedRunId}

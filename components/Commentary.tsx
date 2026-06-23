@@ -309,7 +309,7 @@ export default function Commentary({ events }: CommentaryProps) {
   return (
     <div
       ref={scrollRef}
-      className="overflow-auto min-h-[18rem] max-h-[65vh]"
+      className="overflow-auto min-h-[60vh] max-h-[82vh]"
       role="log"
       aria-live="polite"
       aria-label="Pipeline commentary"
