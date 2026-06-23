@@ -70,12 +70,15 @@ export function mapToRunInput(input: MapToRunInputParams): RunInput {
     explicitOutOfScope.push(outOfScopeAddendum);
   }
 
-  // Service areas: drop nationwide markers
-  const servedAreas = geo.serviceAreas.filter((a) => !isNationwideMarker(a));
+  // Service areas: drop nationwide markers. Guard against non-array inputs
+  // (some clients store service_areas/target_geographies as a non-array jsonb).
+  const serviceAreas = Array.isArray(geo.serviceAreas) ? geo.serviceAreas : [];
+  const targetGeographies = Array.isArray(geo.targetGeographies) ? geo.targetGeographies : [];
+  const servedAreas = serviceAreas.filter((a) => !isNationwideMarker(a));
   const locationDependent = servedAreas.length > 0;
 
   // Target geo: use first entry from targetGeographies, case-insensitive lookup
-  const firstGeo = geo.targetGeographies[0]?.toLowerCase() ?? '';
+  const firstGeo = targetGeographies[0]?.toLowerCase() ?? '';
   const targetGeo = GEO_LOOKUP[firstGeo] ?? DEFAULT_GEO;
 
   // Resources mapping

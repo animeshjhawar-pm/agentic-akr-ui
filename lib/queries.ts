@@ -63,11 +63,19 @@ export async function getClientProfile(
   `;
   const result = await runQuery(client, sql, [id]);
   const row = result.rows[0] ?? {};
+  // service_areas / target_geographies are jsonb and are USUALLY arrays, but a
+  // few clients store them as an object or string. Coerce anything non-array to
+  // [] so downstream .filter()/[0] never throws (this was causing HTTP 500 on
+  // Run for at least one client whose service_areas is a JSON object).
   return {
     businessProfile: (row.business_profile as object) ?? {},
     geo: {
-      targetGeographies: (row.target_geographies as string[]) ?? [],
-      serviceAreas: (row.service_areas as string[]) ?? [],
+      targetGeographies: Array.isArray(row.target_geographies)
+        ? (row.target_geographies as string[])
+        : [],
+      serviceAreas: Array.isArray(row.service_areas)
+        ? (row.service_areas as string[])
+        : [],
     },
   };
 }

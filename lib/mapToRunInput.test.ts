@@ -148,4 +148,21 @@ describe('mapToRunInput', () => {
     const result = mapToRunInput(kitchenFactoryFixture);
     expect(result.knobs).toBeUndefined();
   });
+
+  it('does not throw when serviceAreas/targetGeographies are non-array jsonb (object)', () => {
+    // Some clients store these as a JSON object instead of an array; mapToRunInput
+    // must coerce to [] rather than calling .filter()/[0] on a non-array (HTTP 500).
+    const bad = {
+      ...kitchenFactoryFixture,
+      geo: {
+        serviceAreas: { foo: 'bar' } as unknown as string[],
+        targetGeographies: { a: 1 } as unknown as string[],
+      },
+    };
+    expect(() => mapToRunInput(bad)).not.toThrow();
+    const result = mapToRunInput(bad);
+    expect(result.businessProfile.servedAreas).toEqual([]);
+    expect(result.businessProfile.locationDependent).toBe(false);
+    expect(result.targetGeo).toBeDefined();
+  });
 });
