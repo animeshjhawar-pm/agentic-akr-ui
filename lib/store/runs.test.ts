@@ -143,16 +143,50 @@ describe('listRuns', () => {
     await listRuns(pool);
     const [sql] = pool.query.mock.calls[0];
     expect(sql).toMatch(/FROM runs/);
-    expect(sql).toMatch(/run_id/);
-    expect(sql).toMatch(/client_id/);
-    expect(sql).toMatch(/status/);
+    // FULL OUTER JOIN so triggered-but-not-yet-executed run_requests are surfaced too.
+    expect(sql).toMatch(/FULL OUTER JOIN run_requests/);
+    expect(sql).toMatch(/COALESCE\(r\.run_id, rq\.id\)/);
+    expect(sql).toMatch(/COALESCE\(r\.client_id, rq\.client_id\)/);
+    expect(sql).toMatch(/COALESCE\(r\.status, rq\.status\)/);
     expect(sql).toMatch(/spend/);
     expect(sql).toMatch(/selected/);
     expect(sql).toMatch(/clusters/);
     expect(sql).toMatch(/started_at/);
     expect(sql).toMatch(/finished_at/);
-    expect(sql).toMatch(/ORDER BY r\.started_at DESC NULLS LAST/);
+    expect(sql).toMatch(
+      /ORDER BY COALESCE\(r\.finished_at, r\.started_at, rq\.created_at\) DESC NULLS LAST/,
+    );
     expect(sql).toMatch(/resource_count/);
+  });
+
+  it('surfaces a queued run_request that has no runs row yet', async () => {
+    // A just-triggered run: only the run_requests side of the FULL OUTER JOIN
+    // exists, so the runs-derived columns are null and status comes from rq.
+    const pool = makePool([
+      {
+        run_id: 'req-only-1',
+        client_id: 'cli-9',
+        status: 'queued',
+        spend: null,
+        selected: null,
+        clusters: null,
+        started_at: null,
+        finished_at: null,
+        resource_count: 3,
+      },
+    ]);
+    const rows = await listRuns(pool);
+    expect(rows[0]).toMatchObject({
+      runId: 'req-only-1',
+      clientId: 'cli-9',
+      status: 'queued',
+      spend: null,
+      selected: null,
+      clusters: null,
+      resourceCount: 3,
+    });
+    expect(rows[0].startedAt).toBeNull();
+    expect(rows[0].finishedAt).toBeNull();
   });
 
   it('maps snake_case columns to camelCase', async () => {

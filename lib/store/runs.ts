@@ -83,18 +83,37 @@ function mapRunRow(row: Record<string, unknown>): RunRow {
 }
 
 /**
- * Returns all runs ordered by started_at DESC (most recent first).
- * Runs that have not started yet sort last (NULLS LAST).
- * resource_count is joined from run_requests (run_requests.id == runs.run_id).
+ * Returns every run the UI should show, newest first.
+ *
+ * A "run" in the UI is the union of two durable records:
+ *   - run_requests: written the instant a run is triggered (status 'queued').
+ *   - runs:         written by the engine once it claims and executes the request,
+ *                   and also by direct CLI runs (which have NO run_request).
+ *
+ * We FULL OUTER JOIN the two so a run is visible at EVERY lifecycle stage:
+ *   - triggered but not yet executed -> only a run_requests row exists
+ *     (status 'queued'/'claimed'); it still appears here, so a reload or
+ *     redeploy never makes a just-triggered run vanish.
+ *   - executed via the UI -> both rows exist; the engine's runs.status
+ *     ('running'/'complete'/'failed') takes precedence over the request status.
+ *   - direct CLI run -> only a runs row exists (no request).
+ *
+ * status / run_id / client_id are COALESCEd (runs row wins when present).
+ * spend/selected/clusters/started_at/finished_at come from the runs row (null
+ * until the engine writes it). Ordering uses the best available timestamp so
+ * not-yet-started runs (started_at IS NULL) still sort by when they were queued.
  */
 export async function listRuns(pool: QueryClient): Promise<RunRow[]> {
   const text = `
-    SELECT r.run_id, r.client_id, r.status, r.spend, r.selected, r.clusters,
+    SELECT COALESCE(r.run_id, rq.id)           AS run_id,
+           COALESCE(r.client_id, rq.client_id) AS client_id,
+           COALESCE(r.status, rq.status)       AS status,
+           r.spend, r.selected, r.clusters,
            r.started_at, r.finished_at,
-           array_length(rq.resource_ids, 1) AS resource_count
+           array_length(rq.resource_ids, 1)    AS resource_count
     FROM runs r
-    LEFT JOIN run_requests rq ON rq.id = r.run_id
-    ORDER BY r.started_at DESC NULLS LAST`;
+    FULL OUTER JOIN run_requests rq ON rq.id = r.run_id
+    ORDER BY COALESCE(r.finished_at, r.started_at, rq.created_at) DESC NULLS LAST`;
   const result = await pool.query(text);
   return result.rows.map(mapRunRow);
 }
