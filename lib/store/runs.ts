@@ -64,6 +64,8 @@ export interface RunRow {
   clusters: number | null;
   startedAt: Date | null;
   finishedAt: Date | null;
+  /** Number of resources chosen for this run (from run_requests.resource_ids). */
+  resourceCount: number | null;
 }
 
 function mapRunRow(row: Record<string, unknown>): RunRow {
@@ -76,16 +78,23 @@ function mapRunRow(row: Record<string, unknown>): RunRow {
     clusters: row.clusters != null ? (row.clusters as number) : null,
     startedAt: row.started_at != null ? new Date(row.started_at as string) : null,
     finishedAt: row.finished_at != null ? new Date(row.finished_at as string) : null,
+    resourceCount: row.resource_count != null ? Number(row.resource_count) : null,
   };
 }
 
 /**
  * Returns all runs ordered by started_at DESC (most recent first).
  * Runs that have not started yet sort last (NULLS LAST).
+ * resource_count is joined from run_requests (run_requests.id == runs.run_id).
  */
 export async function listRuns(pool: QueryClient): Promise<RunRow[]> {
-  const text =
-    'SELECT run_id, client_id, status, spend, selected, clusters, started_at, finished_at FROM runs ORDER BY started_at DESC NULLS LAST';
+  const text = `
+    SELECT r.run_id, r.client_id, r.status, r.spend, r.selected, r.clusters,
+           r.started_at, r.finished_at,
+           array_length(rq.resource_ids, 1) AS resource_count
+    FROM runs r
+    LEFT JOIN run_requests rq ON rq.id = r.run_id
+    ORDER BY r.started_at DESC NULLS LAST`;
   const result = await pool.query(text);
   return result.rows.map(mapRunRow);
 }

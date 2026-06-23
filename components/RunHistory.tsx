@@ -34,12 +34,14 @@ export interface RunListRow {
   clusters: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  resourceCount?: number | null;
 }
 
 /** A just-triggered run the parent wants shown before the server list includes it. */
 export interface OptimisticRun {
   runId: string;
   clientId: string;
+  resourceCount?: number;
 }
 
 interface RunHistoryProps {
@@ -51,6 +53,10 @@ interface RunHistoryProps {
   optimisticRuns?: OptimisticRun[];
   /** resourceId -> display name map, threaded to the selected run's ExecutionView. */
   resourceNames?: Record<string, string>;
+  /** clientId -> client display name, for the run row labels. */
+  clientNames?: Record<string, string>;
+  /** When set, the list defaults to showing only this client's runs (with a toggle). */
+  scopeClientId?: string | null;
 }
 
 const REFRESH_MS = 3000;
@@ -109,13 +115,17 @@ export default function RunHistory({
   onSelectRun,
   optimisticRuns = [],
   resourceNames,
+  clientNames,
+  scopeClientId = null,
 }: RunHistoryProps) {
   const [runs, setRuns] = useState<RunListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllClients, setShowAllClients] = useState(false);
   // Uncontrolled fallback when no onSelectRun is provided.
   const [internalSelected, setInternalSelected] = useState<string | null>(null);
   const selected = onSelectRun ? selectedRunId : internalSelected;
+  const clientName = (id: string) => (clientNames && clientNames[id]) || id;
 
   const fetchRuns = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -160,9 +170,14 @@ export default function RunHistory({
         clusters: null,
         startedAt: null,
         finishedAt: null,
+        resourceCount: o.resourceCount ?? null,
       })),
     ...runs,
   ];
+
+  // Scope to the selected client unless the user opts to show all clients.
+  const scoped =
+    scopeClientId && !showAllClients ? merged.filter((r) => r.clientId === scopeClientId) : merged;
 
   const handleSelect = useCallback(
     (runId: string) => {
@@ -180,16 +195,27 @@ export default function RunHistory({
         <div className="flex items-center gap-2">
           <History size={14} aria-hidden="true" className="text-on-surface-muted" />
           <h2 className="text-sm font-semibold text-on-surface">Runs</h2>
-          <span className="text-xs text-on-surface-muted">({merged.length})</span>
+          <span className="text-xs text-on-surface-muted">({scoped.length})</span>
         </div>
-        <button
-          type="button"
-          aria-label="Refresh runs"
-          onClick={() => void fetchRuns()}
-          className="p-1.5 rounded hover:bg-surface-muted text-on-surface-muted cursor-pointer flex items-center justify-center min-h-[36px] min-w-[36px]"
-        >
-          <RefreshCw size={14} aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-2">
+          {scopeClientId && (
+            <button
+              type="button"
+              onClick={() => setShowAllClients((v) => !v)}
+              className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-on-surface hover:bg-surface-muted cursor-pointer"
+            >
+              {showAllClients ? 'This client only' : 'Show all clients'}
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Refresh runs"
+            onClick={() => void fetchRuns()}
+            className="p-1.5 rounded hover:bg-surface-muted text-on-surface-muted cursor-pointer flex items-center justify-center min-h-[36px] min-w-[36px]"
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -206,14 +232,14 @@ export default function RunHistory({
         </div>
       )}
 
-      {!loading && !error && merged.length === 0 && (
+      {!loading && !error && scoped.length === 0 && (
         <p className="text-xs text-on-surface-muted">No runs yet. Trigger one from the panel on the left.</p>
       )}
 
       {/* Run list */}
-      {merged.length > 0 && (
+      {scoped.length > 0 && (
         <ul className="flex flex-col gap-1" role="list" aria-label="Runs">
-          {merged.map((run) => {
+          {scoped.map((run) => {
             const isOpen = selected === run.runId;
             return (
               <li key={run.runId}>
@@ -222,16 +248,26 @@ export default function RunHistory({
                   onClick={() => handleSelect(run.runId)}
                   aria-pressed={isOpen}
                   className={[
-                    'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left text-xs cursor-pointer min-h-[44px]',
+                    'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-left text-xs cursor-pointer min-h-[44px]',
                     'motion-safe:transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                     isOpen
                       ? 'bg-primary/10 border border-primary/30'
                       : 'bg-surface border border-border hover:bg-surface-muted',
                   ].join(' ')}
                 >
-                  <span className="flex items-center gap-3 min-w-0">
-                    <StatusBadge status={run.status} />
-                    <span className="font-mono truncate text-on-surface">{run.runId}</span>
+                  <span className="flex flex-col gap-0.5 min-w-0">
+                    {/* Top label: status + client name + resources chosen */}
+                    <span className="flex items-center gap-2 min-w-0">
+                      <StatusBadge status={run.status} />
+                      <span className="font-semibold text-on-surface truncate">{clientName(run.clientId)}</span>
+                      {run.resourceCount != null && (
+                        <span className="shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-[10px] text-on-surface-muted">
+                          {run.resourceCount} resource{run.resourceCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </span>
+                    {/* Run id underneath */}
+                    <span className="font-mono text-[10px] text-on-surface-muted truncate">{run.runId}</span>
                   </span>
                   <span className="flex items-center gap-3 shrink-0 text-on-surface-muted">
                     {run.clusters != null && <span className="tabular-nums">{run.clusters} pages</span>}

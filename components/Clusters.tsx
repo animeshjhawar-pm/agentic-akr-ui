@@ -246,14 +246,36 @@ export default function Clusters({ runId }: ClustersProps) {
     return [...list].sort((a, b) => (b[key] as number) - (a[key] as number));
   }, [data, minRelevance, intentFilter, pageTypeFilter, sortBy]);
 
-  function handleDownloadJson() {
+  function handleDownloadCsv() {
     if (!data) return;
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+    const esc = (v: string) =>
+      /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    const header = [
+      'Topic', 'Page Type', 'Intent', 'Primary Keyword', 'Primary Volume',
+      'Cluster Volume', 'Relevance', 'Lead Score', 'Already Ranking',
+      'Ranking Position', 'City', 'Secondary Keywords',
+    ];
+    // Export what's currently visible (respects the active filters/sort).
+    const rows = visibleClusters.map((c) => [
+      c.title,
+      c.pageType,
+      c.intent,
+      c.primaryKeyword,
+      c.primaryVolume != null ? String(c.primaryVolume) : '',
+      String(c.clusterVolume),
+      String(Math.round(c.relevanceScore)),
+      String(Math.round(c.leadScore)),
+      c.alreadyRanking ? 'yes' : 'no',
+      c.rankingPosition != null ? String(c.rankingPosition) : '',
+      c.city ?? '',
+      c.secondaryKeywords.map((k) => k.term).join(' | '),
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((f) => esc(String(f))).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `Final_Clusters-${runId}.json`;
+    anchor.download = `Final_Clusters-${runId}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -304,12 +326,12 @@ export default function Clusters({ runId }: ClustersProps) {
         </h3>
         <button
           type="button"
-          aria-label="Download Final_Clusters.json"
-          onClick={handleDownloadJson}
+          aria-label="Download Final_Clusters.csv"
+          onClick={handleDownloadCsv}
           className="flex items-center gap-1.5 bg-surface-elevated border border-border rounded-lg px-3 py-1.5 text-xs text-on-surface hover:bg-border cursor-pointer min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
         >
           <Download size={13} aria-hidden="true" />
-          Download Final_Clusters.json
+          Download Final_Clusters.csv
         </button>
       </div>
 

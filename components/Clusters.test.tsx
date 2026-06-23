@@ -277,7 +277,7 @@ describe('Clusters', () => {
     global.fetch = makeFetchOk(CLUSTERS_DATA);
     render(<Clusters runId="run-1" />);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /download final_clusters\.json/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /download final_clusters\.csv/i })).toBeInTheDocument();
     });
   });
 
@@ -310,14 +310,14 @@ describe('Clusters', () => {
 
     render(<Clusters runId="run-abc" />);
 
-    const btn = await screen.findByRole('button', { name: /download final_clusters\.json/i });
+    const btn = await screen.findByRole('button', { name: /download final_clusters\.csv/i });
     await userEvent.click(btn);
 
     expect(createObjectURL).toHaveBeenCalled();
     expect(clickFn).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalled();
     expect(capturedAnchor).not.toBeNull();
-    expect((capturedAnchor as HTMLAnchorElement | null)?.download).toBe('Final_Clusters-run-abc.json');
+    expect((capturedAnchor as HTMLAnchorElement | null)?.download).toBe('Final_Clusters-run-abc.csv');
 
     createElementSpy.mockRestore();
   });

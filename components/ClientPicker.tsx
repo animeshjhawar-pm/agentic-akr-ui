@@ -48,35 +48,36 @@ export default function ClientPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <label
-        htmlFor="client-search"
-        className="text-sm font-semibold text-on-surface"
-      >
-        Client
-      </label>
-
-      {/* Search input (+ optional right-aligned action, e.g. collapse button) */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted pointer-events-none"
-            aria-hidden="true"
-          />
-          <input
-            ref={inputRef}
-            id="client-search"
-            type="search"
-            placeholder="Search clients..."
-            value={searchRaw}
-            onChange={(e) => setSearchRaw(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-muted pl-8 pr-3 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
-            aria-label="Search clients"
-            aria-autocomplete="list"
-            aria-controls="client-list"
-          />
-        </div>
+      {/* Label row -- collapse action (if provided) aligns to the "Client" label */}
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor="client-search"
+          className="text-sm font-semibold text-on-surface"
+        >
+          Client
+        </label>
         {rightAction}
+      </div>
+
+      {/* Search input */}
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-muted pointer-events-none"
+          aria-hidden="true"
+        />
+        <input
+          ref={inputRef}
+          id="client-search"
+          type="search"
+          placeholder="Search clients..."
+          value={searchRaw}
+          onChange={(e) => setSearchRaw(e.target.value)}
+          className="w-full rounded-lg border border-border bg-surface-muted pl-8 pr-3 py-2 text-sm text-on-surface placeholder:text-on-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
+          aria-label="Search clients"
+          aria-autocomplete="list"
+          aria-controls="client-list"
+        />
       </div>
 
       {/* Client list */}

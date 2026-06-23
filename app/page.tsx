@@ -83,7 +83,9 @@ export default function HomePage() {
     (runId: string) => {
       const clientId = selectedClient?.id ?? '';
       setOptimisticRuns((prev) =>
-        prev.some((r) => r.runId === runId) ? prev : [{ runId, clientId }, ...prev],
+        prev.some((r) => r.runId === runId)
+          ? prev
+          : [{ runId, clientId, resourceCount: selectedResourceIds.size }, ...prev],
       );
       setSelectedRunId(runId);
       // Scroll the content pane (and window) to the top so the new run is visible.
@@ -92,7 +94,13 @@ export default function HomePage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [selectedClient],
+    [selectedClient, selectedResourceIds],
+  );
+
+  // clientId -> name map for the run dashboard labels.
+  const clientNames = React.useMemo(
+    () => Object.fromEntries(clients.map((c) => [c.id, c.name])),
+    [clients],
   );
 
   // Fetch client detail when selection changes
@@ -271,6 +279,8 @@ export default function HomePage() {
             resourceNames={Object.fromEntries(
               (clientDetail?.resources ?? []).map((r) => [r.id, r.name]),
             )}
+            clientNames={clientNames}
+            scopeClientId={selectedClient?.id ?? null}
           />
         </section>
       </main>

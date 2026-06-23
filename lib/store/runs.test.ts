@@ -151,7 +151,8 @@ describe('listRuns', () => {
     expect(sql).toMatch(/clusters/);
     expect(sql).toMatch(/started_at/);
     expect(sql).toMatch(/finished_at/);
-    expect(sql).toMatch(/ORDER BY started_at DESC NULLS LAST/);
+    expect(sql).toMatch(/ORDER BY r\.started_at DESC NULLS LAST/);
+    expect(sql).toMatch(/resource_count/);
   });
 
   it('maps snake_case columns to camelCase', async () => {
