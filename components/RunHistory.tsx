@@ -18,6 +18,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { History, ChevronRight, Loader, AlertCircle, RefreshCw } from 'lucide-react';
+import RunTimer from './RunTimer';
+import { isoToMs } from '@/lib/formatDuration';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +35,10 @@ export interface RunListRow {
   clusters: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  /** When the run was enqueued (run_requests.created_at); timer origin fallback. */
+  createdAt?: string | null;
+  /** Client-side trigger time (ms) for an optimistic row with no server timestamps yet. */
+  triggeredAt?: number;
   resourceCount?: number | null;
 }
 
@@ -41,6 +47,8 @@ export interface OptimisticRun {
   runId: string;
   clientId: string;
   resourceCount?: number;
+  /** Epoch ms the run was triggered, so its counter ticks before the server row lands. */
+  triggeredAt?: number;
 }
 
 interface RunHistoryProps {
@@ -166,6 +174,8 @@ export default function RunHistory({
         clusters: null,
         startedAt: null,
         finishedAt: null,
+        createdAt: null,
+        triggeredAt: o.triggeredAt,
         resourceCount: o.resourceCount ?? null,
       })),
     ...runs,
@@ -267,6 +277,12 @@ export default function RunHistory({
                   </span>
                   <span className="flex items-center gap-3 shrink-0 text-on-surface-muted">
                     {run.clusters != null && <span className="tabular-nums">{run.clusters} pages</span>}
+                    <RunTimer
+                      startMs={isoToMs(run.startedAt) ?? isoToMs(run.createdAt ?? null) ?? run.triggeredAt ?? null}
+                      endMs={isoToMs(run.finishedAt)}
+                      showIcon
+                      className="tabular-nums"
+                    />
                     <span className="hidden sm:inline tabular-nums">{formatStarted(run.startedAt)}</span>
                     <ChevronRight
                       size={12}

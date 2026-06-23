@@ -88,7 +88,10 @@ export default function HomePage() {
       setOptimisticRuns((prev) =>
         prev.some((r) => r.runId === runId)
           ? prev
-          : [{ runId, clientId, resourceCount: selectedResourceIds.size }, ...prev],
+          : [
+              { runId, clientId, resourceCount: selectedResourceIds.size, triggeredAt: Date.now() },
+              ...prev,
+            ],
       );
       setSelectedRunId(runId);
       setShowRuns(true);

@@ -16,6 +16,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Activity, AlertTriangle } from 'lucide-react';
 import { useRunPolling } from '@/lib/useRunPolling';
+import { isoToMs } from '@/lib/formatDuration';
+import RunTimer from './RunTimer';
 import Commentary from './Commentary';
 import EventLog from './EventLog';
 import TreeEventLog from './TreeEventLog';
@@ -48,9 +50,13 @@ interface TotalsHeaderProps {
   pages: number;
   streamDone: boolean;
   stalled: boolean;
+  /** Origin for the time-taken counter (started, else queued). */
+  startMs: number | null;
+  /** End for the time-taken counter; null while running -> live ticking. */
+  endMs: number | null;
 }
 
-function TotalsHeader({ spend, selected, pages, streamDone, stalled }: TotalsHeaderProps) {
+function TotalsHeader({ spend, selected, pages, streamDone, stalled, startMs, endMs }: TotalsHeaderProps) {
   // Three distinct states: Complete (done) > Stalled (open but silent) > Running.
   const statusLabel = streamDone ? 'Complete' : stalled ? 'Stalled' : 'Running';
   const iconClass = streamDone
@@ -81,6 +87,14 @@ function TotalsHeader({ spend, selected, pages, streamDone, stalled }: TotalsHea
         <span className={`text-xs font-semibold ${textClass}`}>
           {statusLabel}
         </span>
+      </div>
+
+      {/* Time taken -- live counter while running, frozen total when done */}
+      <div className="flex flex-col items-center gap-0.5 bg-surface-muted rounded-lg px-3 py-2">
+        <span className="text-base font-semibold tabular-nums text-on-surface">
+          <RunTimer startMs={startMs} endMs={endMs} />
+        </span>
+        <span className="text-[10px] text-on-surface-muted">Time</span>
       </div>
 
       {/* Spend */}
@@ -183,13 +197,35 @@ function tabPanelId(id: TabId) {
 // ---------------------------------------------------------------------------
 
 export default function ExecutionView({ runId, resourceNames, onStreamDone }: ExecutionViewProps) {
-  const { stages, log, totals, streamDone, stalled, liveSpend, liveSelected, liveClusters } =
-    useRunPolling(runId);
+  const {
+    stages,
+    log,
+    totals,
+    streamDone,
+    stalled,
+    liveSpend,
+    liveSelected,
+    liveClusters,
+    startedAt,
+    finishedAt,
+    createdAt,
+  } = useRunPolling(runId);
   // Prefer live totals from the runs row (spend updates in real time); fall back
   // to event-derived totals (which only fill in at run completion).
   const headerSpend = liveSpend ?? totals.spend;
   const headerSelected = liveSelected ?? totals.selected;
   const headerPages = liveClusters ?? totals.pages;
+
+  // Time taken: origin is when the engine started, else when it was queued.
+  const timerStartMs = isoToMs(startedAt) ?? isoToMs(createdAt);
+  // Freeze the counter when the run ends even if finished_at lands a poll late
+  // (terminal can be detected from a RunComplete event before the runs row
+  // finished_at is read). Capture a client end once streamDone flips true.
+  const [frozenEndMs, setFrozenEndMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (streamDone) setFrozenEndMs((prev) => prev ?? Date.now());
+  }, [streamDone]);
+  const timerEndMs = isoToMs(finishedAt) ?? (streamDone ? frozenEndMs : null);
 
   // Notify the parent exactly once when the run finishes, so the run
   // lifecycle can advance to 'done' (re-enabling RunConfig for a new run).
@@ -264,6 +300,8 @@ export default function ExecutionView({ runId, resourceNames, onStreamDone }: Ex
           pages={headerPages}
           streamDone={streamDone}
           stalled={stalled}
+          startMs={timerStartMs}
+          endMs={timerEndMs}
         />
       </div>
 

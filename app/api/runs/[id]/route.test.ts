@@ -53,6 +53,8 @@ function makeRunRow(status: string): RunRow {
     clusters: null,
     startedAt: null,
     finishedAt: null,
+    createdAt: null,
+    resourceCount: null,
   };
 }
 

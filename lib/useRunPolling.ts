@@ -42,7 +42,15 @@ type PollAction =
   | { type: 'stalled' }
   | { type: 'done' }
   | { type: 'error'; message: string }
-  | { type: 'totals'; spend: number | null; selected: number | null; clusters: number | null };
+  | {
+      type: 'totals';
+      spend: number | null;
+      selected: number | null;
+      clusters: number | null;
+      startedAt: string | null;
+      finishedAt: string | null;
+      createdAt: string | null;
+    };
 
 interface PollState {
   reduced: RunReducerState;
@@ -53,6 +61,10 @@ interface PollState {
   liveSpend: number | null;
   liveSelected: number | null;
   liveClusters: number | null;
+  // Timestamps for the "time taken" counter (ISO strings from the runs row).
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string | null;
 }
 
 function makeInitialPollState(): PollState {
@@ -64,6 +76,9 @@ function makeInitialPollState(): PollState {
     liveSpend: null,
     liveSelected: null,
     liveClusters: null,
+    startedAt: null,
+    finishedAt: null,
+    createdAt: null,
   };
 }
 
@@ -92,6 +107,9 @@ function pollReducer(state: PollState, action: PollAction): PollState {
         liveSpend: action.spend ?? state.liveSpend,
         liveSelected: action.selected ?? state.liveSelected,
         liveClusters: action.clusters ?? state.liveClusters,
+        startedAt: action.startedAt ?? state.startedAt,
+        finishedAt: action.finishedAt ?? state.finishedAt,
+        createdAt: action.createdAt ?? state.createdAt,
       };
   }
 }
@@ -109,6 +127,9 @@ export type UseRunPollingResult = RunReducerState & {
   liveSpend: number | null;
   liveSelected: number | null;
   liveClusters: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -196,6 +217,9 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
           spend?: number | null;
           selected?: number | null;
           clusters?: number | null;
+          startedAt?: string | null;
+          finishedAt?: string | null;
+          createdAt?: string | null;
         };
 
         const newEvents: RunEvent[] = Array.isArray(data.events) ? data.events : [];
@@ -208,6 +232,9 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
           spend: typeof data.spend === 'number' ? data.spend : null,
           selected: typeof data.selected === 'number' ? data.selected : null,
           clusters: typeof data.clusters === 'number' ? data.clusters : null,
+          startedAt: typeof data.startedAt === 'string' ? data.startedAt : null,
+          finishedAt: typeof data.finishedAt === 'string' ? data.finishedAt : null,
+          createdAt: typeof data.createdAt === 'string' ? data.createdAt : null,
         });
 
         // Advance cursor
@@ -264,5 +291,8 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
     liveSpend: pollState.liveSpend,
     liveSelected: pollState.liveSelected,
     liveClusters: pollState.liveClusters,
+    startedAt: pollState.startedAt,
+    finishedAt: pollState.finishedAt,
+    createdAt: pollState.createdAt,
   };
 }

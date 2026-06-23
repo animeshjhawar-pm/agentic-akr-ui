@@ -40,5 +40,9 @@ export async function GET(
     spend: run?.spend ?? null,
     selected: run?.selected ?? null,
     clusters: run?.clusters ?? null,
+    // Timestamps for the "time taken" counter (ISO strings via JSON Date serialization).
+    startedAt: run?.startedAt ?? null,
+    finishedAt: run?.finishedAt ?? null,
+    createdAt: run?.createdAt ?? null,
   });
 }

@@ -153,6 +153,7 @@ describe('listRuns', () => {
     expect(sql).toMatch(/clusters/);
     expect(sql).toMatch(/started_at/);
     expect(sql).toMatch(/finished_at/);
+    expect(sql).toMatch(/rq\.created_at\s+AS created_at/); // timer origin fallback
     expect(sql).toMatch(
       /ORDER BY COALESCE\(r\.finished_at, r\.started_at, rq\.created_at\) DESC NULLS LAST/,
     );
@@ -239,7 +240,8 @@ describe('getRun', () => {
     ]);
     const result = await getRun(pool, 'run-1');
     const [sql, params] = pool.query.mock.calls[0];
-    expect(sql).toMatch(/WHERE run_id=\$1/);
+    expect(sql).toMatch(/WHERE r\.run_id=\$1/);
+    expect(sql).toMatch(/created_at/); // joined from run_requests for the time-taken origin
     expect(params).toEqual(['run-1']);
     expect(result?.runId).toBe('run-1');
     expect(result?.status).toBe('done');

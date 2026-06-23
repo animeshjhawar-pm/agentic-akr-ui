@@ -64,6 +64,8 @@ export interface RunRow {
   clusters: number | null;
   startedAt: Date | null;
   finishedAt: Date | null;
+  /** When the run was enqueued (run_requests.created_at). Origin for "time taken". */
+  createdAt: Date | null;
   /** Number of resources chosen for this run (from run_requests.resource_ids). */
   resourceCount: number | null;
 }
@@ -78,6 +80,7 @@ function mapRunRow(row: Record<string, unknown>): RunRow {
     clusters: row.clusters != null ? (row.clusters as number) : null,
     startedAt: row.started_at != null ? new Date(row.started_at as string) : null,
     finishedAt: row.finished_at != null ? new Date(row.finished_at as string) : null,
+    createdAt: row.created_at != null ? new Date(row.created_at as string) : null,
     resourceCount: row.resource_count != null ? Number(row.resource_count) : null,
   };
 }
@@ -110,6 +113,7 @@ export async function listRuns(pool: QueryClient): Promise<RunRow[]> {
            COALESCE(r.status, rq.status)       AS status,
            r.spend, r.selected, r.clusters,
            r.started_at, r.finished_at,
+           rq.created_at                       AS created_at,
            array_length(rq.resource_ids, 1)    AS resource_count
     FROM runs r
     FULL OUTER JOIN run_requests rq ON rq.id = r.run_id
@@ -122,8 +126,12 @@ export async function listRuns(pool: QueryClient): Promise<RunRow[]> {
  * Returns a single run row, or null if not found.
  */
 export async function getRun(pool: QueryClient, runId: string): Promise<RunRow | null> {
-  const text =
-    'SELECT run_id, client_id, status, spend, selected, clusters, started_at, finished_at FROM runs WHERE run_id=$1';
+  const text = `
+    SELECT r.run_id, r.client_id, r.status, r.spend, r.selected, r.clusters,
+           r.started_at, r.finished_at, rq.created_at AS created_at
+    FROM runs r
+    LEFT JOIN run_requests rq ON rq.id = r.run_id
+    WHERE r.run_id=$1`;
   const result = await pool.query(text, [runId]);
   if (result.rows.length === 0) return null;
   return mapRunRow(result.rows[0]);
