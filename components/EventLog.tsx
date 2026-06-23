@@ -382,7 +382,7 @@ const EventRow = React.memo(function EventRow({ evt, expanded, onToggle, sameSta
   return (
     <div className="border-b border-border last:border-0" style={groupingStyle}>
       {/* Collapsed header - always visible */}
-      <div className="flex items-start gap-2 px-3 py-2 text-xs hover:bg-surface-muted">
+      <div className="flex items-start gap-2 px-3 py-1 text-xs leading-snug hover:bg-surface-muted">
         {/* Expand/collapse button */}
         <button
           type="button"

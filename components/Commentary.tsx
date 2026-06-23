@@ -358,7 +358,7 @@ export default function Commentary({ events }: CommentaryProps) {
         <div
           key={`${item.ts}-${item.stage}-${idx}`}
           data-testid="commentary-item"
-          className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-border last:border-0 hover:bg-surface-muted"
+          className="flex items-start gap-2 px-3 py-1 text-xs leading-snug border-b border-border last:border-0 hover:bg-surface-muted"
         >
           {/* Icon */}
           <span className="mt-0.5">

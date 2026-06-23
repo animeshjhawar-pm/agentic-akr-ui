@@ -11,6 +11,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Loader, AlertCircle, ChevronRight, Download, FileBox } from 'lucide-react';
+import Tooltip from './Tooltip';
+
+const ARTIFACTS_HELP =
+  "Raw pipeline outputs captured during the run. Kind: lane-output (a resource lane's final state), lane-step (one agent step), checkpoint (lane snapshot), planner-decision (orchestrator choice), substep:NN (a clustering-tail stage), db-snapshot (SQLite size only). The chip is the resource it belongs to; #N is its order within that kind. Click a row to view/download its JSON.";
 
 interface ArtifactRow {
   id: number;
@@ -156,6 +160,7 @@ export default function Artifacts({ runId, resourceNames }: ArtifactsProps) {
         <FileBox size={14} aria-hidden="true" className="text-on-surface-muted" />
         <h3 className="text-sm font-semibold text-on-surface">Artifacts</h3>
         <span className="text-xs text-on-surface-muted">({artifacts.length})</span>
+        <Tooltip description={ARTIFACTS_HELP} />
       </div>
       <ul className="flex flex-col gap-1.5" role="list">
         {artifacts.map((a) => (

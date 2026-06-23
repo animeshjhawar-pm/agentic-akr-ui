@@ -158,23 +158,37 @@ function ClusterCard({ cluster }: { cluster: ClusterPage }) {
         </div>
       </div>
 
-      {/* Secondary keywords -- actual list */}
-      {cluster.secondaryKeywords.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <FieldLabel>Secondary keywords ({cluster.secondaryKeywords.length})</FieldLabel>
-          <div className="flex flex-wrap gap-1">
-            {cluster.secondaryKeywords.map((kw) => (
-              <span
-                key={kw.term}
-                className="inline-block rounded bg-surface-muted px-1.5 py-0.5 text-[11px] text-on-surface-muted"
-                title={kw.volume != null ? `${formatVolume(kw.volume)} vol` : undefined}
-              >
-                {kw.term}
-              </span>
-            ))}
+      {/* Secondary keywords -- show first SECONDARY_LIMIT, trim the rest behind a
+          "+N more" chip that lists them all on hover (keeps long clusters compact). */}
+      {cluster.secondaryKeywords.length > 0 && (() => {
+        const SECONDARY_LIMIT = 8;
+        const shown = cluster.secondaryKeywords.slice(0, SECONDARY_LIMIT);
+        const hidden = cluster.secondaryKeywords.slice(SECONDARY_LIMIT);
+        return (
+          <div className="flex flex-col gap-1">
+            <FieldLabel>Secondary keywords ({cluster.secondaryKeywords.length})</FieldLabel>
+            <div className="flex flex-wrap gap-1">
+              {shown.map((kw) => (
+                <span
+                  key={kw.term}
+                  className="inline-block rounded bg-surface-muted px-1.5 py-0.5 text-[11px] text-on-surface-muted"
+                  title={kw.volume != null ? `${formatVolume(kw.volume)} vol` : undefined}
+                >
+                  {kw.term}
+                </span>
+              ))}
+              {hidden.length > 0 && (
+                <span
+                  className="inline-block rounded bg-surface px-1.5 py-0.5 text-[11px] font-medium text-on-surface border border-border cursor-default"
+                  title={hidden.map((k) => k.term).join(', ')}
+                >
+                  +{hidden.length} more
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Metrics row */}
       <div className="flex items-center gap-5 text-xs text-on-surface-muted flex-wrap border-t border-border pt-2 mt-auto">

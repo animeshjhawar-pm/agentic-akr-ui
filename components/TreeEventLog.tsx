@@ -117,7 +117,7 @@ function LeafNode({ evt, depth }: LeafNodeProps) {
   return (
     <div className="border-b border-border last:border-0">
       <div
-        className="flex items-start gap-2 py-1.5 text-xs hover:bg-surface-muted"
+        className="flex items-start gap-2 py-1 text-xs leading-snug hover:bg-surface-muted"
         style={{ paddingLeft }}
       >
         <button
