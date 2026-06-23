@@ -256,6 +256,39 @@ function StageIcon({ stage }: StageIconProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Step pill -- which pipeline step each line belongs to
+// ---------------------------------------------------------------------------
+
+const STEP_META: Record<string, { label: string; cls: string }> = {
+  planner: { label: 'Planner', cls: 'bg-primary/10 text-primary' },
+  'angle-derivation': { label: 'Angles', cls: 'bg-warning/10 text-warning' },
+  'seed-gen': { label: 'Seeds', cls: 'bg-warning/10 text-warning' },
+  'broad-match': { label: 'Broad match', cls: 'bg-surface-muted text-on-surface-muted' },
+  'name-expansion': { label: 'Name exp', cls: 'bg-surface-muted text-on-surface-muted' },
+  'mine-serp': { label: 'SERP', cls: 'bg-warning/10 text-warning' },
+  'pre-gate': { label: 'Pre-gate', cls: 'bg-warning/10 text-warning' },
+  grade: { label: 'Grade', cls: 'bg-success/10 text-success' },
+  clustering: { label: 'Cluster', cls: 'bg-primary/10 text-primary' },
+  geo: { label: 'Geo', cls: 'bg-primary/10 text-primary' },
+  run: { label: 'Run', cls: 'bg-success/10 text-success' },
+  lane: { label: 'Lane', cls: 'bg-surface-muted text-on-surface-muted' },
+  cluster: { label: 'Cluster', cls: 'bg-surface-muted text-on-surface-muted' },
+  score: { label: 'Score', cls: 'bg-surface-muted text-on-surface-muted' },
+  select: { label: 'Select', cls: 'bg-surface-muted text-on-surface-muted' },
+};
+
+function StepPill({ stage }: { stage: string }) {
+  const meta = STEP_META[stage] ?? { label: stage, cls: 'bg-surface-muted text-on-surface-muted' };
+  return (
+    <span
+      className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${meta.cls}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // NarrativeItem
 // ---------------------------------------------------------------------------
 
@@ -335,6 +368,8 @@ export default function Commentary({ events }: CommentaryProps) {
           <span className="font-mono tabular-nums text-on-surface-muted flex-shrink-0 w-[60px]">
             {formatTs(item.ts)}
           </span>
+          {/* Step pill */}
+          <StepPill stage={item.stage} />
           {/* Sentence */}
           <span className="text-on-surface flex-1 min-w-0">
             {item.sentence}
