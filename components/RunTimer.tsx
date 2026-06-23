@@ -4,18 +4,19 @@
  * RunTimer -- the "time taken" display for a run.
  *
  * Given a start origin and an optional end:
- *   - end provided  -> static total duration (end - start). This is the logged
- *     time taken for a finished run.
- *   - end omitted   -> a LIVE counter that ticks every second from start to now,
- *     so it grows the moment a run begins.
- *   - start null    -> renders a dash (nothing to measure yet).
+ *   - end provided  -> static total duration (end - start). The logged time taken.
+ *   - end omitted    -> a LIVE counter: now - start, refreshed every second while
+ *     the run is in flight.
+ *   - start null     -> a dash (nothing to measure yet).
  *
- * The ticking `now` is initialized to `start` (elapsed 0) so the server-rendered
- * and first client-rendered markup match (no hydration flicker); the effect then
- * advances it to the real wall clock and ticks once per second.
+ * The live clock is read via useSyncExternalStore -- its getSnapshot is the
+ * sanctioned place to read mutable external state (the wall clock), so there is
+ * no impure-render or setState-in-effect lint violation. The server snapshot is
+ * a deterministic 0; RunTimer is also only mounted after a client interaction
+ * (selecting/triggering a run), so it never renders during SSR.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useSyncExternalStore } from 'react';
 import { Clock } from 'lucide-react';
 import { formatDuration } from '@/lib/formatDuration';
 
@@ -29,6 +30,23 @@ interface RunTimerProps {
   showIcon?: boolean;
 }
 
+/** Current epoch ms, re-rendering once per second while `active`. */
+function useNow(active: boolean): number {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!active) return () => {};
+      const id = setInterval(onChange, 1000);
+      return () => clearInterval(id);
+    },
+    [active],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => Date.now(),
+    () => 0,
+  );
+}
+
 export default function RunTimer({
   startMs,
   endMs = null,
@@ -36,15 +54,7 @@ export default function RunTimer({
   showIcon = false,
 }: RunTimerProps) {
   const live = endMs == null && startMs != null;
-
-  const [now, setNow] = useState<number>(startMs ?? 0);
-
-  useEffect(() => {
-    if (!live) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [live, startMs]);
+  const now = useNow(live);
 
   if (startMs == null) {
     return (

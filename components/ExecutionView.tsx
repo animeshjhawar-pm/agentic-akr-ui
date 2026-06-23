@@ -209,6 +209,7 @@ export default function ExecutionView({ runId, resourceNames, onStreamDone }: Ex
     startedAt,
     finishedAt,
     createdAt,
+    finishedClientMs,
   } = useRunPolling(runId);
   // Prefer live totals from the runs row (spend updates in real time); fall back
   // to event-derived totals (which only fill in at run completion).
@@ -216,16 +217,15 @@ export default function ExecutionView({ runId, resourceNames, onStreamDone }: Ex
   const headerSelected = liveSelected ?? totals.selected;
   const headerPages = liveClusters ?? totals.pages;
 
-  // Time taken: origin is when the engine started, else when it was queued.
-  const timerStartMs = isoToMs(startedAt) ?? isoToMs(createdAt);
-  // Freeze the counter when the run ends even if finished_at lands a poll late
-  // (terminal can be detected from a RunComplete event before the runs row
-  // finished_at is read). Capture a client end once streamDone flips true.
-  const [frozenEndMs, setFrozenEndMs] = useState<number | null>(null);
-  useEffect(() => {
-    if (streamDone) setFrozenEndMs((prev) => prev ?? Date.now());
-  }, [streamDone]);
-  const timerEndMs = isoToMs(finishedAt) ?? (streamDone ? frozenEndMs : null);
+  // Time taken: anchor on when the run was queued (the moment Run was clicked),
+  // falling back to the engine start. createdAt-first keeps the origin STABLE for
+  // the run's lifetime -- it never migrates to the later started_at, so the live
+  // counter cannot jump backward at the queued -> running transition.
+  const timerStartMs = isoToMs(createdAt) ?? isoToMs(startedAt);
+  // Freeze the counter when the run ends. Prefer the server finished_at; fall
+  // back to the client end captured by useRunPolling at termination (covers the
+  // case where finished_at lands a poll late after a RunComplete event).
+  const timerEndMs = isoToMs(finishedAt) ?? finishedClientMs;
 
   // Notify the parent exactly once when the run finishes, so the run
   // lifecycle can advance to 'done' (re-enabling RunConfig for a new run).

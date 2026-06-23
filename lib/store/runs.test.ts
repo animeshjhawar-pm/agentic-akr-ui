@@ -240,7 +240,9 @@ describe('getRun', () => {
     ]);
     const result = await getRun(pool, 'run-1');
     const [sql, params] = pool.query.mock.calls[0];
-    expect(sql).toMatch(/WHERE r\.run_id=\$1/);
+    // FULL OUTER JOIN + COALESCE so an enqueued-only run still resolves (queued phase).
+    expect(sql).toMatch(/FULL OUTER JOIN run_requests/);
+    expect(sql).toMatch(/WHERE COALESCE\(r\.run_id, rq\.id\)=\$1/);
     expect(sql).toMatch(/created_at/); // joined from run_requests for the time-taken origin
     expect(params).toEqual(['run-1']);
     expect(result?.runId).toBe('run-1');

@@ -26,13 +26,13 @@ describe('RunTimer', () => {
 
     it('grows once per second when end is omitted', () => {
       const start = 2_000_000;
-      vi.setSystemTime(start); // base clock; mount effect captures now === start
+      vi.setSystemTime(start); // base clock; render reads Date.now() === start -> 0s
 
       render(<RunTimer startMs={start} />);
       expect(screen.getByText('0s')).toBeInTheDocument();
 
-      // advanceTimersByTime moves the faked Date too, so each tick reads the
-      // advanced clock; after 3s the last tick sets now = start + 3000.
+      // advanceTimersByTime moves the faked Date too; each tick re-renders and the
+      // render reads the advanced Date.now(), so after 3s it shows start + 3000.
       act(() => {
         vi.advanceTimersByTime(3_000);
       });

@@ -247,6 +247,15 @@ export default function RunHistory({
         <ul className="flex flex-col gap-1" role="list" aria-label="Runs">
           {scoped.map((run) => {
             const isOpen = selected === run.runId;
+            const tone = statusTone(run.status);
+            const terminalRun = tone === 'complete' || tone === 'failed';
+            // Stable origin: queue/trigger time, never the later started_at, so the
+            // live counter does not jump backward at queued -> running.
+            const timerStartMs =
+              isoToMs(run.createdAt ?? null) ?? run.triggeredAt ?? isoToMs(run.startedAt) ?? null;
+            // Freeze terminal rows even if finished_at is momentarily missing, so a
+            // completed/failed row never ticks forever.
+            const timerEndMs = isoToMs(run.finishedAt) ?? (terminalRun ? timerStartMs : null);
             return (
               <li key={run.runId}>
                 <button
@@ -278,8 +287,8 @@ export default function RunHistory({
                   <span className="flex items-center gap-3 shrink-0 text-on-surface-muted">
                     {run.clusters != null && <span className="tabular-nums">{run.clusters} pages</span>}
                     <RunTimer
-                      startMs={isoToMs(run.startedAt) ?? isoToMs(run.createdAt ?? null) ?? run.triggeredAt ?? null}
-                      endMs={isoToMs(run.finishedAt)}
+                      startMs={timerStartMs}
+                      endMs={timerEndMs}
                       showIcon
                       className="tabular-nums"
                     />

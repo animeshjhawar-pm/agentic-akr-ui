@@ -126,12 +126,19 @@ export async function listRuns(pool: QueryClient): Promise<RunRow[]> {
  * Returns a single run row, or null if not found.
  */
 export async function getRun(pool: QueryClient, runId: string): Promise<RunRow | null> {
+  // FULL OUTER JOIN (mirrors listRuns) so a run that is only enqueued -- a
+  // run_requests row with no runs row yet -- still resolves. That makes
+  // createdAt (the time-taken origin) and a 'queued' status available during the
+  // queued phase, instead of returning null until the engine writes the runs row.
   const text = `
-    SELECT r.run_id, r.client_id, r.status, r.spend, r.selected, r.clusters,
+    SELECT COALESCE(r.run_id, rq.id)           AS run_id,
+           COALESCE(r.client_id, rq.client_id) AS client_id,
+           COALESCE(r.status, rq.status)       AS status,
+           r.spend, r.selected, r.clusters,
            r.started_at, r.finished_at, rq.created_at AS created_at
     FROM runs r
-    LEFT JOIN run_requests rq ON rq.id = r.run_id
-    WHERE r.run_id=$1`;
+    FULL OUTER JOIN run_requests rq ON rq.id = r.run_id
+    WHERE COALESCE(r.run_id, rq.id)=$1`;
   const result = await pool.query(text, [runId]);
   if (result.rows.length === 0) return null;
   return mapRunRow(result.rows[0]);

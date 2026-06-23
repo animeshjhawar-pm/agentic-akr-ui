@@ -40,7 +40,7 @@ type PollAction =
   | { type: 'reset' }
   | { type: 'append'; events: RunEvent[] }
   | { type: 'stalled' }
-  | { type: 'done' }
+  | { type: 'done'; clientEndMs: number }
   | { type: 'error'; message: string }
   | {
       type: 'totals';
@@ -65,6 +65,9 @@ interface PollState {
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string | null;
+  // Client-clock end captured when the run terminates, used as a fallback so the
+  // counter freezes even if the server finished_at lands a poll late.
+  finishedClientMs: number | null;
 }
 
 function makeInitialPollState(): PollState {
@@ -79,6 +82,7 @@ function makeInitialPollState(): PollState {
     startedAt: null,
     finishedAt: null,
     createdAt: null,
+    finishedClientMs: null,
   };
 }
 
@@ -97,7 +101,12 @@ function pollReducer(state: PollState, action: PollAction): PollState {
       if (state.streamDone) return state;
       return { ...state, stalled: true };
     case 'done':
-      return { ...state, streamDone: true, stalled: false };
+      return {
+        ...state,
+        streamDone: true,
+        stalled: false,
+        finishedClientMs: state.finishedClientMs ?? action.clientEndMs,
+      };
     case 'error':
       return { ...state, error: action.message };
     case 'totals':
@@ -130,6 +139,7 @@ export type UseRunPollingResult = RunReducerState & {
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string | null;
+  finishedClientMs: number | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -257,7 +267,9 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
           clearStallTimer();
           // Clear immediately -- do not wait for the next interval tick's guard.
           clearInterval(intervalBox.id);
-          dispatch({ type: 'done' });
+          // Date.now() here runs in the async poll callback (not render), so it is
+          // lint-safe; it is the fallback end if the server finished_at is absent.
+          dispatch({ type: 'done', clientEndMs: Date.now() });
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Poll error';
@@ -294,5 +306,6 @@ export function useRunPolling(runId: string | null): UseRunPollingResult {
     startedAt: pollState.startedAt,
     finishedAt: pollState.finishedAt,
     createdAt: pollState.createdAt,
+    finishedClientMs: pollState.finishedClientMs,
   };
 }
