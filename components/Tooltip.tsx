@@ -41,7 +41,7 @@ export default function Tooltip({ description, className }: TooltipProps) {
           'cursor-default',
         ].join(' ')}
       >
-        <Info size={12} aria-hidden="true" />
+        <Info size={14} aria-hidden="true" />
       </button>
 
       {/* Description element -- always in the DOM so aria-describedby resolves */}

@@ -438,29 +438,38 @@ interface EventLogRowsProps {
 }
 
 function EventLogRows({ visible, filteredCount, scrollRef }: EventLogRowsProps) {
-  const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
+  // Expansion keyed by a stable event identity (not array index) so it stays on
+  // the right row as new events prepend in newest-first order.
+  const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
 
-  // Gated auto-scroll: only scroll when already near the bottom
+  // Newest-first (latest on top): auto-scroll to the top only when already near
+  // the top, so reading older events below is not interrupted.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || visible.length === 0) return;
-    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
-    if (nearBottom) {
-      el.scrollTop = el.scrollHeight;
+    const nearTop = el.scrollTop <= 80;
+    if (nearTop) {
+      el.scrollTop = 0;
     }
   }, [visible.length, scrollRef]);
 
-  const handleToggle = useCallback((index: number) => {
+  const handleToggle = useCallback((key: string) => {
     setExpandedSet((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(index);
+        next.add(key);
       }
       return next;
     });
   }, []);
+
+  // Render newest first; "previous" (for same-stage grouping) is the row above,
+  // i.e. the newer neighbour in this reversed order.
+  const rows = [...visible].reverse();
+  const rowKey = (evt: RunEvent, idx: number) =>
+    `${evt.ts}-${evt.stage}-${'type' in evt ? (evt as { type?: string }).type ?? '' : ''}-${idx}`;
 
   return (
     <>
@@ -469,15 +478,18 @@ function EventLogRows({ visible, filteredCount, scrollRef }: EventLogRowsProps) 
           Showing last {MAX_VISIBLE} of {filteredCount} events
         </div>
       )}
-      {visible.map((evt, idx) => (
-        <EventRow
-          key={`${evt.ts}-${evt.stage}-${idx}`}
-          evt={evt}
-          expanded={expandedSet.has(idx)}
-          onToggle={() => handleToggle(idx)}
-          sameStageAsPrev={idx > 0 && visible[idx - 1]!.stage === evt.stage}
-        />
-      ))}
+      {rows.map((evt, idx) => {
+        const key = rowKey(evt, idx);
+        return (
+          <EventRow
+            key={key}
+            evt={evt}
+            expanded={expandedSet.has(key)}
+            onToggle={() => handleToggle(key)}
+            sameStageAsPrev={idx > 0 && rows[idx - 1]!.stage === evt.stage}
+          />
+        );
+      })}
     </>
   );
 }

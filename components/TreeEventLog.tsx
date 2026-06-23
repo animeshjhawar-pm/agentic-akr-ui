@@ -18,6 +18,16 @@ import React, { useState, useCallback } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { RunEvent } from '@/lib/events';
 import { ExpandedDetail, stageBadgeClass } from './EventLog';
+import Tooltip from './Tooltip';
+
+// Plain-English description of each phase for the (i) tooltip on the header.
+const PHASE_INFO: Record<PhaseName, string> = {
+  Planner: 'The orchestrator agent that decides what to run next -- which offering lanes to launch, when to cluster, and when to finish.',
+  Generation: 'Per-offering keyword discovery: derive angles, generate seeds, expand via DataForSEO/SERP, and grade each keyword for relevance.',
+  Selection: 'Turns the kept keywords into topic clusters and scores/ranks them into candidate pages.',
+  Geo: 'Localizes the top topics into city-specific page variants for location-dependent businesses.',
+  Result: 'Final run output: selected keywords, candidate pages, and total spend.',
+};
 
 // ---------------------------------------------------------------------------
 // Phase definitions
@@ -180,7 +190,7 @@ function ResourceGroup({ resourceId, events, depth }: ResourceGroupProps) {
       </div>
       {open && (
         <div>
-          {events.map((evt, idx) => (
+          {[...events].reverse().map((evt, idx) => (
             <LeafNode key={`${evt.ts}-${evt.stage}-${idx}`} evt={evt} depth={depth + 1} />
           ))}
         </div>
@@ -234,6 +244,7 @@ function PhaseNode({ name, events }: PhaseNodeProps) {
         </button>
         <span className="text-on-surface">{name}</span>
         <span className="text-on-surface-muted text-[10px] font-normal">({events.length})</span>
+        <Tooltip description={PHASE_INFO[name]} />
       </div>
       {open && (
         <div>
@@ -241,7 +252,7 @@ function PhaseNode({ name, events }: PhaseNodeProps) {
             ? Array.from(resourceGroups.entries()).map(([rid, evts]) => (
                 <ResourceGroup key={rid} resourceId={rid} events={evts} depth={1} />
               ))
-            : events.map((evt, idx) => (
+            : [...events].reverse().map((evt, idx) => (
                 <LeafNode key={`${evt.ts}-${evt.stage}-${idx}`} evt={evt} depth={1} />
               ))}
         </div>

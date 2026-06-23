@@ -206,8 +206,12 @@ describe('TreeEventLog - collapsible nodes', () => {
 
   it('all collapsible nodes have aria-expanded attribute', () => {
     renderTree([plannerEvt, geoEvt, runEvt]);
-    const buttons = screen.getAllByRole('button');
-    // Every button should have aria-expanded
+    // Exclude the phase "More information" tooltip buttons -- they are not
+    // collapsible nodes (they use aria-describedby, not aria-expanded).
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((b) => b.getAttribute('aria-label') !== 'More information');
+    expect(buttons.length).toBeGreaterThan(0);
     buttons.forEach((btn) => {
       expect(btn).toHaveAttribute('aria-expanded');
     });

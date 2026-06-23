@@ -77,6 +77,26 @@ function IntentBadge({ intent }: { intent: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Page-type badge color
+// ---------------------------------------------------------------------------
+
+const PAGE_TYPE_BADGE_STYLE: Record<string, string> = {
+  blog:          'bg-warning/10 text-warning border border-warning/30',
+  guide:         'bg-warning/10 text-warning border border-warning/30',
+  listicle:      'bg-warning/10 text-warning border border-warning/30',
+  service:       'bg-primary/10 text-primary border border-primary/30',
+  category:      'bg-success/10 text-success border border-success/30',
+  product:       'bg-success/10 text-success border border-success/30',
+  comparison:    'bg-danger-surface text-danger border border-danger/30',
+  informational: 'bg-warning/10 text-warning border border-warning/30',
+  commercial:    'bg-primary/10 text-primary border border-primary/30',
+};
+
+function pageTypeBadgeClass(pageType: string): string {
+  return PAGE_TYPE_BADGE_STYLE[pageType.toLowerCase()] ?? 'bg-surface-muted text-on-surface border border-border';
+}
+
+// ---------------------------------------------------------------------------
 // Volume formatter
 // ---------------------------------------------------------------------------
 
@@ -104,7 +124,7 @@ function ClusterCard({ cluster }: { cluster: ClusterPage }) {
       {/* Topic (title) + page type / intent / badges */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-muted text-on-surface capitalize">
+          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium capitalize ${pageTypeBadgeClass(cluster.pageType)}`}>
             {cluster.pageType}
           </span>
           <IntentBadge intent={cluster.intent} />

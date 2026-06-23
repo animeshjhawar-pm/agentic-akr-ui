@@ -271,13 +271,15 @@ interface CommentaryProps {
 export default function Commentary({ events }: CommentaryProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Gated auto-scroll: only scroll when near the bottom
+  // Newest-first (stack): keep the latest line at the top. Auto-scroll to the
+  // top only when the user is already near the top, so reading older lines below
+  // is not interrupted.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
-    if (nearBottom) {
-      el.scrollTop = el.scrollHeight;
+    const nearTop = el.scrollTop <= 80;
+    if (nearTop) {
+      el.scrollTop = 0;
     }
   }, [events.length]);
 
@@ -314,7 +316,7 @@ export default function Commentary({ events }: CommentaryProps) {
       aria-live="polite"
       aria-label="Pipeline commentary"
     >
-      {items.map((item, idx) => (
+      {[...items].reverse().map((item, idx) => (
         <div
           key={`${item.ts}-${item.stage}-${idx}`}
           data-testid="commentary-item"
